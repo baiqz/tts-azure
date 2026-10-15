@@ -1,0 +1,2022 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="不限字数的文字转 MP3 工具，内置 958 种语音（含云泽、晓晓、云希等），纯前端、免安装。">
+<title>文字转 MP3 · 不限字数 · 含云泽</title>
+<style>/* ===================================================================
+   文字转 MP3 —— 界面样式（深色）
+   =================================================================== */
+
+:root {
+  --bg: #0a0e14;
+  --bg-grad: radial-gradient(1200px 600px at 15% -10%, #123043 0%, transparent 60%),
+             radial-gradient(900px 500px at 95% 0%, #1a2440 0%, transparent 55%);
+  --panel: #121821;
+  --panel-2: #182029;
+  --panel-3: #1e2833;
+  --border: #232e3c;
+  --border-soft: #1b2531;
+  --text: #e6ebf3;
+  --dim: #8b98ab;
+  --dim-2: #6b7789;
+  --accent: #2ed3d3;
+  --accent-2: #37a7ff;
+  --accent-dim: rgba(46, 211, 211, 0.12);
+  --danger: #ff6b6b;
+  --warn: #ffb84d;
+  --ok: #3ddc97;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 8px 24px rgba(0, 0, 0, .22);
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, "Segoe UI", "Microsoft YaHei", "PingFang SC", sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: var(--bg-grad);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.wrap {
+  position: relative;
+  z-index: 1;
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 22px 20px 48px;
+}
+
+/* ------------------------------------------------------- 顶栏 */
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+
+.brand { display: flex; align-items: center; gap: 13px; }
+
+.logo {
+  width: 44px; height: 44px;
+  display: grid; place-items: center;
+  border-radius: 13px;
+  font-size: 21px; font-weight: 700;
+  color: #06222a;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  box-shadow: 0 6px 18px rgba(46, 211, 211, .22);
+  flex: none;
+}
+
+.brand-text h1 { margin: 0; font-size: 19px; font-weight: 650; letter-spacing: .2px; }
+.brand-text p { margin: 1px 0 0; font-size: 12.5px; color: var(--dim); }
+.brand-text b { color: var(--accent); font-weight: 600; }
+
+.channel {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 13px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--panel);
+  font-size: 12.5px;
+  color: var(--dim);
+  white-space: nowrap;
+}
+.channel .dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--dim-2); flex: none;
+  transition: background .25s, box-shadow .25s;
+}
+.channel.ok  .dot { background: var(--ok);    box-shadow: 0 0 0 3px rgba(61, 220, 151, .16); }
+.channel.err .dot { background: var(--danger); box-shadow: 0 0 0 3px rgba(255, 107, 107, .16); }
+.channel.busy .dot { background: var(--warn); animation: pulse 1.1s infinite; }
+@keyframes pulse { 50% { opacity: .3; } }
+
+/* ------------------------------------------------------- 面板 */
+
+.grid {
+  display: grid;
+  grid-template-columns: 1.38fr 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+  padding: 15px 16px 16px;
+  box-shadow: var(--shadow);
+}
+.panel + .panel, .grid + .panel { margin-top: 16px; }
+
+.phead {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; margin-bottom: 11px;
+}
+.phead h2 { margin: 0; font-size: 14px; font-weight: 600; letter-spacing: .3px; }
+.phead-tools { display: flex; gap: 6px; }
+
+.pill {
+  font-size: 11.5px;
+  color: var(--dim);
+  background: var(--panel-3);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 3px 10px;
+  white-space: nowrap;
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ------------------------------------------------------- 文本区 */
+
+.editor textarea {
+  width: 100%;
+  min-height: 366px;
+  resize: vertical;
+  padding: 13px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: #0d131b;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13.5px;
+  line-height: 1.75;
+  outline: none;
+  transition: border-color .18s, box-shadow .18s;
+}
+.editor textarea:focus {
+  border-color: rgba(46, 211, 211, .5);
+  box-shadow: 0 0 0 3px var(--accent-dim);
+}
+.editor textarea::placeholder { color: var(--dim-2); }
+
+.stats {
+  display: flex; flex-wrap: wrap; gap: 6px 16px;
+  margin-top: 10px; font-size: 12.5px; color: var(--dim);
+}
+.stats b { color: var(--text); font-weight: 600; }
+.stats .hint { color: var(--warn); }
+.stats .hint.good { color: var(--ok); }
+
+/* ------------------------------------------------------- 音色区 */
+
+.input {
+  width: 100%;
+  padding: 8px 11px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: #0d131b;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13px;
+  outline: none;
+  transition: border-color .18s, box-shadow .18s;
+}
+.input:focus { border-color: rgba(46, 211, 211, .5); box-shadow: 0 0 0 3px var(--accent-dim); }
+select.input { cursor: pointer; }
+
+.tabs {
+  display: flex; flex-wrap: wrap; gap: 5px;
+  margin: 10px 0 9px;
+}
+.tab {
+  padding: 4px 10px;
+  font-size: 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--dim);
+  cursor: pointer;
+  transition: all .15s;
+  font-family: inherit;
+}
+.tab:hover { color: var(--text); border-color: #33404f; }
+.tab.on {
+  color: #06222a;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  border-color: transparent;
+  font-weight: 600;
+}
+.tab .n { opacity: .65; font-size: 11px; margin-left: 3px; }
+
+.voicelist {
+  max-height: 268px;
+  min-height: 96px;
+  overflow-y: auto;
+  padding-right: 5px;
+  margin-bottom: 9px;
+  scrollbar-width: thin;
+  scrollbar-color: #2c3947 transparent;
+}
+.voicelist::-webkit-scrollbar { width: 8px; }
+.voicelist::-webkit-scrollbar-thumb { background: #2c3947; border-radius: 4px; }
+.voicelist::-webkit-scrollbar-track { background: transparent; }
+
+.voice {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 10px; width: 100%;
+  text-align: left;
+  padding: 8px 11px;
+  margin-bottom: 4px;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  background: var(--panel-2);
+  color: var(--text);
+  cursor: pointer;
+  font-family: inherit;
+  transition: all .14s;
+}
+.voice:hover { background: var(--panel-3); border-color: var(--border); }
+.voice.on {
+  background: linear-gradient(90deg, rgba(46,211,211,.16), rgba(55,167,255,.07));
+  border-color: rgba(46, 211, 211, .45);
+}
+.voice .vname { font-size: 13px; font-weight: 550; }
+.voice .vname .star { color: var(--accent); margin-right: 4px; }
+.voice .vmeta { font-size: 11.5px; color: var(--dim); white-space: nowrap; }
+.voice.on .vmeta { color: #9fe8e8; }
+
+.empty { padding: 26px 10px; text-align: center; color: var(--dim-2); font-size: 12.5px; }
+
+/* ------------------------------------------------------- 参数区 */
+
+.ctrls {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(215px, 1fr));
+  gap: 14px 22px;
+  align-items: start;
+}
+
+.field { display: block; }
+.field > span {
+  display: block;
+  font-size: 12.5px;
+  color: var(--dim);
+  margin-bottom: 5px;
+}
+.field > span b { color: var(--accent); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+input[type=range] {
+  width: 100%;
+  accent-color: var(--accent);
+  height: 20px;
+  cursor: pointer;
+}
+
+.advanced {
+  grid-column: 1 / -1;
+  border-top: 1px solid var(--border-soft);
+  padding-top: 11px;
+}
+.advanced > summary {
+  cursor: pointer; color: var(--dim); font-size: 12.5px;
+  list-style: none; user-select: none;
+}
+.advanced > summary::-webkit-details-marker { display: none; }
+.advanced > summary::before { content: "▸ "; }
+.advanced[open] > summary::before { content: "▾ "; }
+.advanced > summary:hover { color: var(--text); }
+.adv-body {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(215px, 1fr));
+  gap: 14px 22px;
+  margin-top: 12px;
+}
+
+/* ------------------------------------------------------- 按钮 */
+
+.btn {
+  padding: 9px 18px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--panel-3);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 550;
+  cursor: pointer;
+  transition: all .15s;
+  white-space: nowrap;
+}
+.btn:hover:not(:disabled) { background: #26313d; border-color: #35424f; transform: translateY(-1px); }
+.btn:active:not(:disabled) { transform: translateY(0); }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.btn.sm { padding: 5px 11px; font-size: 12.5px; }
+.btn.block { width: 100%; }
+.btn.ghost { background: transparent; }
+.btn.ghost:hover:not(:disabled) { background: var(--panel-3); }
+
+.btn.primary {
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  border-color: transparent;
+  color: #06222a;
+  font-weight: 650;
+}
+.btn.primary:hover:not(:disabled) { box-shadow: 0 6px 20px rgba(46, 211, 211, .28); }
+.btn.danger { border-color: rgba(255,107,107,.4); color: var(--danger); background: transparent; }
+.btn.danger:hover:not(:disabled) { background: rgba(255,107,107,.1); }
+
+.actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+
+/* ------------------------------------------------------- 进度 / 提示 */
+
+.progress { margin-top: 14px; }
+.bar {
+  height: 7px;
+  border-radius: 999px;
+  background: #0d131b;
+  overflow: hidden;
+  border: 1px solid var(--border-soft);
+}
+.fill {
+  height: 100%;
+  width: 0;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  transition: width .25s ease;
+}
+.ptext {
+  display: flex; justify-content: space-between;
+  margin-top: 6px; font-size: 12.5px; color: var(--dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.alert {
+  margin-top: 13px;
+  padding: 10px 13px;
+  border-radius: var(--radius-sm);
+  font-size: 12.8px;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  border: 1px solid rgba(255, 107, 107, .35);
+  background: rgba(255, 107, 107, .08);
+  color: #ffc0c0;
+}
+.alert.info { border-color: rgba(55,167,255,.35); background: rgba(55,167,255,.08); color: #bfe0ff; }
+.alert.good { border-color: rgba(61,220,151,.3); background: rgba(61,220,151,.07); color: #b6f2d6; }
+
+/* ------------------------------------------------------- 结果 */
+
+.result audio {
+  width: 100%;
+  margin: 4px 0 10px;
+  height: 40px;
+  border-radius: var(--radius-sm);
+  filter: invert(0.92) hue-rotate(180deg) saturate(1.4);
+}
+
+.result-meta {
+  display: flex; flex-wrap: wrap; gap: 6px 18px;
+  font-size: 12.5px; color: var(--dim);
+}
+.result-meta b { color: var(--text); font-weight: 600; }
+.filename { font-size: 12.5px; color: var(--dim-2); }
+
+/* ------------------------------------------------------- 页脚 */
+
+.foot {
+  margin-top: 26px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border-soft);
+  font-size: 12.3px;
+  color: var(--dim-2);
+  line-height: 1.8;
+}
+.foot p { margin: 0 0 8px; max-width: 900px; }
+.foot b { color: var(--dim); }
+.foot .dim { color: var(--dim-2); margin-bottom: 0; }
+
+/* ------------------------------------------------------- 响应式 */
+
+@media (max-width: 940px) {
+  .grid { grid-template-columns: 1fr; }
+  .editor textarea { min-height: 250px; }
+  .voicelist { height: 230px; }
+  .wrap { padding: 16px 13px 40px; }
+}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <!-- ======================= 顶栏 ======================= -->
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo">泽</div>
+      <div class="brand-text">
+        <h1>文字转 MP3</h1>
+        <p>不限字数 · 内置 <b id="statVoices">—</b> 种语音 · 中文 <b id="statZh">—</b> 种，含云泽</p>
+      </div>
+    </div>
+    <div class="channel" id="channel" title="语音通道状态">
+      <span class="dot" id="channelDot"></span>
+      <span id="channelText">检测中…</span>
+    </div>
+  </header>
+
+  <!-- ======================= 主区 ======================= -->
+  <div class="grid">
+
+    <!-- 文本 -->
+    <section class="panel editor">
+      <div class="phead">
+        <h2>文本</h2>
+        <div class="phead-tools">
+          <button class="btn ghost sm" id="btnPaste">读取剪贴板</button>
+          <button class="btn ghost sm" id="btnSample">示例</button>
+          <button class="btn ghost sm" id="btnClear">清空</button>
+        </div>
+      </div>
+      <textarea id="text" spellcheck="false"
+        placeholder="把要转成语音的文字贴进来，多少字都行 ——&#10;一万字、十万字都可以，工具会自动分段、并行合成、再无缝拼成一整条 MP3。"></textarea>
+      <div class="stats">
+        <span><b id="sChars">0</b> 字</span>
+        <span><b id="sChunks">0</b> 段</span>
+        <span>约 <b id="sTime">0:00</b></span>
+        <span>约 <b id="sSize">0 KB</b></span>
+        <span class="hint" id="sHint"></span>
+      </div>
+    </section>
+
+    <!-- 音色 -->
+    <aside class="panel voices">
+      <div class="phead">
+        <h2>音色</h2>
+        <span class="pill" id="voiceListCount">—</span>
+      </div>
+      <input class="input" id="voiceSearch" placeholder="搜索：云泽 / 晓晓 / yunze / 东北">
+      <div class="tabs" id="voiceTabs"></div>
+      <div class="voicelist" id="voiceList"></div>
+      <button class="btn ghost block" id="btnMore">显示更多</button>
+    </aside>
+
+  </div>
+
+  <!-- ======================= 参数 + 操作 ======================= -->
+  <section class="panel controls">
+    <div class="phead">
+      <h2>参数</h2>
+      <span class="pill" id="curVoice">云泽 · 男声 · zh-CN</span>
+    </div>
+
+    <div class="ctrls">
+
+      <label class="field">
+        <span>语速 <b id="rateVal">0%</b></span>
+        <input type="range" id="rate" min="-50" max="100" step="5" value="0">
+      </label>
+
+      <label class="field">
+        <span>音调 <b id="pitchVal">0Hz</b></span>
+        <input type="range" id="pitch" min="-50" max="50" step="5" value="0">
+      </label>
+
+      <label class="field">
+        <span>音量 <b id="volumeVal">0%</b></span>
+        <input type="range" id="volume" min="-50" max="50" step="5" value="0">
+      </label>
+
+      <label class="field">
+        <span>情感风格 <b id="styleCount"></b></span>
+        <select class="input" id="style"><option value="">默认（不带风格）</option></select>
+      </label>
+
+      <details class="advanced">
+        <summary>高级设置</summary>
+        <div class="adv-body">
+          <label class="field">
+            <span>每段字数 <b id="chunkVal">800</b></span>
+            <input type="range" id="chunkSize" min="200" max="2000" step="100" value="800">
+          </label>
+          <label class="field">
+            <span>并发数 <b id="concVal">3</b></span>
+            <input type="range" id="concurrency" min="1" max="6" step="1" value="3">
+          </label>
+        </div>
+      </details>
+
+    </div>
+
+    <div class="actions">
+      <button class="btn" id="btnPreview">试听音色</button>
+      <button class="btn primary" id="btnStart">开始合成</button>
+      <button class="btn danger" id="btnCancel" style="display:none">取消</button>
+    </div>
+
+    <div class="progress" id="progressWrap" style="display:none">
+      <div class="bar"><div class="fill" id="progressBar"></div></div>
+      <div class="ptext"><span id="progressPhase">准备中</span><span id="progressText">0%</span></div>
+    </div>
+
+    <div class="alert" id="alert" style="display:none"></div>
+  </section>
+
+  <!-- ======================= 结果 ======================= -->
+  <section class="panel result" id="resultCard" style="display:none">
+    <div class="phead">
+      <h2>成品</h2>
+      <span class="pill" id="resultFormat"></span>
+    </div>
+    <audio id="audio" controls></audio>
+    <div class="result-meta" id="resultInfo"></div>
+    <div class="actions">
+      <button class="btn primary" id="btnDownload">下载 MP3</button>
+      <span class="filename" id="fileName"></span>
+    </div>
+  </section>
+
+  <!-- ======================= 说明 ======================= -->
+  <footer class="foot">
+    <p><b>它是怎么做到"不限字数"的？</b> 文字会先按段落和句子切成小段，几段并行合成，再把音频按帧边界无缝拼成一条。所以一万字和一百字走的是同一套流程，只是段数不同 —— 不存在"字数上限"这回事。</p>
+    <p><b>通道说明：</b>本工具走的是微软公开的语音合成通道，无需注册、无需密钥、不消耗你的任何额度，也不上传文字到第三方服务器。它是公开接口而非微软官方授权入口，可能随时失效；若要用于商业交付，建议改用 Azure 官方语音服务（正式 API + 你自己的密钥）。请勿用于违法或侵权用途。</p>
+    <p class="dim">纯前端实现 · 双击即用 · 可离线保存后使用（联网即可合成）</p>
+  </footer>
+
+</div>
+
+<script>/* ==================== voices-data.js ==================== */
+/* 自动生成，请勿手改 —— 由 tools/gen_voices_data.py 产出 */
+(function (root, factory) {
+  if (typeof module === "object" && module.exports) module.exports = factory();
+  else root.AzureVoicesData = factory();
+})(typeof self !== "undefined" ? self : this, function () {
+  return { generatedAt: "2026-10-15", total: 958, voices: [{"n":"af-ZA-AdriNeural","dn":"Adri","g":"F","l":"af-ZA","s":"","st":[],"p":["Well-Rounded","Animated","Bright"]},{"n":"af-ZA-WillemNeural","dn":"Willem","g":"M","l":"af-ZA","s":"","st":[],"p":[]},{"n":"am-ET-MekdesNeural","dn":"Mekdes","g":"F","l":"am-ET","s":"","st":[],"p":[]},{"n":"am-ET-AmehaNeural","dn":"Ameha","g":"M","l":"am-ET","s":"","st":[],"p":[]},{"n":"ar-AE-FatimaNeural","dn":"Fatima","g":"F","l":"ar-AE","s":"","st":[],"p":["Crisp","Bright","Clear"]},{"n":"ar-AE-HamdanNeural","dn":"Hamdan","g":"M","l":"ar-AE","s":"","st":[],"p":[]},{"n":"ar-AE-Rashid:DragonHDLatestNeural","dn":"Rashid · Dragon HD","g":"M","l":"ar-AE","s":"Dragon HD","st":[],"p":["Crisp","Bright","Clear"]},{"n":"ar-BH-LailaNeural","dn":"Laila","g":"F","l":"ar-BH","s":"","st":[],"p":[]},{"n":"ar-BH-AliNeural","dn":"Ali","g":"M","l":"ar-BH","s":"","st":[],"p":[]},{"n":"ar-DZ-AminaNeural","dn":"Amina","g":"F","l":"ar-DZ","s":"","st":[],"p":["Crisp","Bright","Clear"]},{"n":"ar-DZ-IsmaelNeural","dn":"Ismael","g":"M","l":"ar-DZ","s":"","st":[],"p":[]},{"n":"ar-EG-SalmaNeural","dn":"Salma","g":"F","l":"ar-EG","s":"","st":[],"p":["Crisp","Bright","Clear"]},{"n":"ar-EG-ShakirNeural","dn":"Shakir","g":"M","l":"ar-EG","s":"","st":[],"p":[]},{"n":"ar-IQ-RanaNeural","dn":"Rana","g":"F","l":"ar-IQ","s":"","st":[],"p":[]},{"n":"ar-IQ-BasselNeural","dn":"Bassel","g":"M","l":"ar-IQ","s":"","st":[],"p":[]},{"n":"ar-JO-SanaNeural","dn":"Sana","g":"F","l":"ar-JO","s":"","st":[],"p":[]},{"n":"ar-JO-TaimNeural","dn":"Taim","g":"M","l":"ar-JO","s":"","st":[],"p":[]},{"n":"ar-KW-NouraNeural","dn":"Noura","g":"F","l":"ar-KW","s":"","st":[],"p":["Crisp","Bright","Clear"]},{"n":"ar-KW-FahedNeural","dn":"Fahed","g":"M","l":"ar-KW","s":"","st":[],"p":[]},{"n":"ar-LB-LaylaNeural","dn":"Layla","g":"F","l":"ar-LB","s":"","st":[],"p":[]},{"n":"ar-LB-RamiNeural","dn":"Rami","g":"M","l":"ar-LB","s":"","st":[],"p":[]},{"n":"ar-LY-ImanNeural","dn":"Iman","g":"F","l":"ar-LY","s":"","st":[],"p":[]},{"n":"ar-LY-OmarNeural","dn":"Omar","g":"M","l":"ar-LY","s":"","st":[],"p":[]},{"n":"ar-MA-MounaNeural","dn":"Mouna","g":"F","l":"ar-MA","s":"","st":[],"p":["Crisp","Bright","Clear"]},{"n":"ar-MA-JamalNeural","dn":"Jamal","g":"M","l":"ar-MA","s":"","st":[],"p":[]},{"n":"ar-OM-AyshaNeural","dn":"Aysha","g":"F","l":"ar-OM","s":"","st":[],"p":["Sincere","Pleasant"]},{"n":"ar-OM-AbdullahNeural","dn":"Abdullah","g":"M","l":"ar-OM","s":"","st":[],"p":[]},{"n":"ar-QA-AmalNeural","dn":"Amal","g":"F","l":"ar-QA","s":"","st":[],"p":[]},{"n":"ar-QA-MoazNeural","dn":"Moaz","g":"M","l":"ar-QA","s":"","st":[],"p":[]},{"n":"ar-SA-ZariyahNeural","dn":"Zariyah","g":"F","l":"ar-SA","s":"","st":[],"p":["Crisp","Bright","Clear"]},{"n":"ar-SA-HamedNeural","dn":"Hamed","g":"M","l":"ar-SA","s":"","st":[],"p":[]},{"n":"ar-SY-AmanyNeural","dn":"Amany","g":"F","l":"ar-SY","s":"","st":[],"p":["Sincere","Pleasant"]},{"n":"ar-SY-LaithNeural","dn":"Laith","g":"M","l":"ar-SY","s":"","st":[],"p":[]},{"n":"ar-TN-ReemNeural","dn":"Reem","g":"F","l":"ar-TN","s":"","st":[],"p":["Sincere","Pleasant"]},{"n":"ar-TN-HediNeural","dn":"Hedi","g":"M","l":"ar-TN","s":"","st":[],"p":[]},{"n":"ar-YE-MaryamNeural","dn":"Maryam","g":"F","l":"ar-YE","s":"","st":[],"p":[]},{"n":"ar-YE-SalehNeural","dn":"Saleh","g":"M","l":"ar-YE","s":"","st":[],"p":[]},{"n":"as-IN-YashicaNeural","dn":"Yashica","g":"F","l":"as-IN","s":"","st":[],"p":[]},{"n":"as-IN-PriyomNeural","dn":"Priyom","g":"M","l":"as-IN","s":"","st":[],"p":[]},{"n":"az-AZ-BanuNeural","dn":"Banu","g":"F","l":"az-AZ","s":"","st":[],"p":[]},{"n":"az-AZ-BabekNeural","dn":"Babek","g":"M","l":"az-AZ","s":"","st":[],"p":[]},{"n":"bg-BG-KalinaNeural","dn":"Kalina","g":"F","l":"bg-BG","s":"","st":[],"p":[]},{"n":"bg-BG-BorislavNeural","dn":"Borislav","g":"M","l":"bg-BG","s":"","st":[],"p":["Light-Hearted","Whimsical","Friendly"]},{"n":"bn-BD-NabanitaNeural","dn":"Nabanita","g":"F","l":"bn-BD","s":"","st":[],"p":[]},{"n":"bn-BD-PradeepNeural","dn":"Pradeep","g":"M","l":"bn-BD","s":"","st":[],"p":[]},{"n":"bn-IN-TanishaaNeural","dn":"Tanishaa","g":"F","l":"bn-IN","s":"","st":[],"p":[]},{"n":"bn-IN-BashkarNeural","dn":"Bashkar","g":"M","l":"bn-IN","s":"","st":[],"p":[]},{"n":"bs-BA-VesnaNeural","dn":"Vesna","g":"F","l":"bs-BA","s":"","st":[],"p":[]},{"n":"bs-BA-GoranNeural","dn":"Goran","g":"M","l":"bs-BA","s":"","st":[],"p":[]},{"n":"ca-ES-JoanaNeural","dn":"Joana","g":"F","l":"ca-ES","s":"","st":[],"p":[]},{"n":"ca-ES-EnricNeural","dn":"Enric","g":"M","l":"ca-ES","s":"","st":[],"p":[]},{"n":"ca-ES-AlbaNeural","dn":"Alba","g":"F","l":"ca-ES","s":"","st":[],"p":["Crisp","Bright","Clear"]},{"n":"cs-CZ-VlastaNeural","dn":"Vlasta","g":"F","l":"cs-CZ","s":"","st":[],"p":[]},{"n":"cs-CZ-AntoninNeural","dn":"Antonin","g":"M","l":"cs-CZ","s":"","st":[],"p":[]},{"n":"cs-CZ-Grant:MAI-Voice-2.1-Flash","dn":"Grant · MAI Voice 2.1 Flash","g":"M","l":"cs-CZ","s":"MAI Voice 2.1 Flash","st":[],"p":[]},{"n":"cs-CZ-Harper:MAI-Voice-2.1-Flash","dn":"Harper · MAI Voice 2.1 Flash","g":"F","l":"cs-CZ","s":"MAI Voice 2.1 Flash","st":[],"p":[]},{"n":"cs-CZ-Grant:MAI-Voice-2.1","dn":"Grant · MAI Voice 2.1","g":"M","l":"cs-CZ","s":"MAI Voice 2.1","st":[],"p":[]},{"n":"cs-CZ-Harper:MAI-Voice-2.1","dn":"Harper · MAI Voice 2.1","g":"F","l":"cs-CZ","s":"MAI Voice 2.1","st":[],"p":[]},{"n":"cy-GB-NiaNeural","dn":"Nia","g":"F","l":"cy-GB","s":"","st":[],"p":[]},{"n":"cy-GB-AledNeural","dn":"Aled","g":"M","l":"cy-GB","s":"","st":[],"p":[]},{"n":"da-DK-ChristelNeural","dn":"Christel","g":"F","l":"da-DK","s":"","st":[],"p":[]},{"n":"da-DK-JeppeNeural","dn":"Jeppe","g":"M","l":"da-DK","s":"","st":[],"p":[]},{"n":"da-DK-Grant:MAI-Voice-2.1-Flash","dn":"Grant · MAI Voice 2.1 Flash","g":"M","l":"da-DK","s":"MAI Voice 2.1 Flash","st":[],"p":[]},{"n":"da-DK-Harper:MAI-Voice-2.1-Flash","dn":"Harper · MAI Voice 2.1 Flash","g":"F","l":"da-DK","s":"MAI Voice 2.1 Flash","st":[],"p":[]},{"n":"da-DK-Grant:MAI-Voice-2.1","dn":"Grant · MAI Voice 2.1","g":"M","l":"da-DK","s":"MAI Voice 2.1","st":[],"p":[]},{"n":"da-DK-Harper:MAI-Voice-2.1","dn":"Harper · MAI Voice 2.1","g":"F","l":"da-DK","s":"MAI Voice 2.1","st":[],"p":[]},{"n":"de-AT-IngridNeural","dn":"Ingrid","g":"F","l":"de-AT","s":"","st":[],"p":[]},{"n":"de-AT-JonasNeural","dn":"Jonas","g":"M","l":"de-AT","s":"","st":[],"p":["Light-Hearted","Whimsical","Friendly"]},{"n":"de-CH-LeniNeural","dn":"Leni","g":"F","l":"de-CH","s":"","st":[],"p":[]},{"n":"de-CH-JanNeural","dn":"Jan","g":"M","l":"de-CH","s":"","st":[],"p":[]},{"n":"de-DE-Seraphina:DragonHDLatestNeural","dn":"Seraphina · Dragon HD","g":"F","l":"de-DE","s":"Dragon HD","st":[],"p":["Cheerful","Sincere","Pleasant","Warm","Friendly"]},{"n":"de-DE-Florian:DragonHDLatestNeural","dn":"Florian · Dragon HD","g":"M","l":"de-DE","s":"Dragon HD","st":[],"p":[]},{"n":"de-DE-SeraphinaMultilingualNeural","dn":"Seraphina · 多语言","g":"F","l":"de-DE","s":"","st":[],"p":["Casual","Casual"]},{"n":"de-DE-FlorianMultilingualNeural","dn":"Florian · 多语言","g":"M","l":"de-DE","s":"","st":[],"p":["Cheerful","Warm"]},{"n":"de-DE-KatjaNeural","dn":"Katja","g":"F","l":"de-DE","s":"","st":[],"p":["Calm","Pleasant"]},{"n":"de-DE-ConradNeural","dn":"Conrad","g":"M","l":"de-DE","s":"","st":["cheerful","sad"],"p":["Engaging","Friendly"]},{"n":"de-DE-AmalaNeural","dn":"Amala","g":"F","l":"de-DE","s":"","st":[],"p":["Well-Rounded","Animated","Bright"]},{"n":"de-DE-BerndNeural","dn":"Bernd","g":"M","l":"de-DE","s":"","st":[],"p":[]},{"n":"de-DE-ChristophNeural","dn":"Christoph","g":"M","l":"de-DE","s":"","st":[],"p":[]},{"n":"de-DE-ElkeNeural","dn":"Elke","g":"F","l":"de-DE","s":"","st":[],"p":[]},{"n":"de-DE-GiselaNeural","dn":"Gisela","g":"F","l":"de-DE","s":"","st":[],"p":["Crisp","Cheerful","Bright"]},{"n":"de-DE-KasperNeural","dn":"Kasper","g":"M","l":"de-DE","s":"","st":[],"p":[]},{"n":"de-DE-KillianNeural","dn":"Killian","g":"M","l":"de-DE","s":"","st":[],"p":[]},{"n":"de-DE-KlarissaNeural","dn":"Klarissa","g":"F","l":"de-DE","s":"","st":[],"p":[]},{"n":"de-DE-KlausNeural","dn":"Klaus","g":"M","l":"de-DE","s":"","st":[],"p":[]},{"n":"de-DE-LouisaNeural","dn":"Louisa","g":"F","l":"de-DE","s":"","st":[],"p":[]},{"n":"de-DE-MajaNeural","dn":"Maja","g":"F","l":"de-DE","s":"","st":[],"p":[]},{"n":"de-DE-RalfNeural","dn":"Ralf","g":"M","l":"de-DE","s":"","st":[],"p":[]},{"n":"de-DE-TanjaNeural","dn":"Tanja","g":"F","l":"de-DE","s":"","st":[],"p":[]},{"n":"de-DE-Grant:MAI-Voice-2.1-Flash","dn":"Grant · MAI Voice 2.1 Flash","g":"M","l":"de-DE","s":"MAI Voice 2.1 Flash","st":[],"p":[]},{"n":"de-DE-Harper:MAI-Voice-2.1-Flash","dn":"Harper · MAI Voice 2.1 Flash","g":"F","l":"de-DE","s":"MAI Voice 2.1 Flash","st":[],"p":[]},{"n":"de-DE-Klaus:MAI-Voice-2-Flash","dn":"Klaus · MAI Voice 2 Flash","g":"M","l":"de-DE","s":"MAI Voice 2 Flash","st":["angry","confused","determined","disgusted","embarrassed","excited","fearful","happy","hopeful","jealous","joyful","regretful","relieved","sad","shouting","softvoice","surprised","whispering"],"p":[]},{"n":"de-DE-Klaus:MAI-Voice-2.1-Flash","dn":"Klaus · MAI Voice 2.1 Flash","g":"M","l":"de-DE","s":"MAI Voice 2.1 Flash","st":["angry","confused","determined","disgusted","embarrassed","excited","fearful","happy","hopeful","jealous","joyful","regretful","relieved","sad","shouting","softvoice","surprised","whispering"],"p":[]},{"n":"de-DE-Mia:MAI-Voice-2-Flash","dn":"Mia · MAI Voice 2 Flash","g":"F","l":"de-DE","s":"MAI Voice 2 Flash","st":["angry","confused","determined","disgusted","embarrassed","excited","fearful","happy","hopeful","jealous","joyful","regretful","relieved","sad","shouting","softvoice","surprised","whispering"],"p":[]},{"n":"de-DE-Mia:MAI-Voice-2.1-Flash","dn":"Mia · MAI Voice 2.1 Flash","g":"F","l":"de-DE","s":"MAI Voice 2.1 Flash","st":["angry","confused","determined","disgusted","embarrassed","excited","fearful","happy","hopeful","jealous","joyful","regretful","relieved","sad","shouting","softvoice","surprised","whispering"],"p":[]},{"n":"de-DE-Seraphina:DragonLatestNeural","dn":"Seraphina · Dragon","g":"F","l":"de-DE","s":"Dragon","st":[],"p":[]},{"n":"de-DE-Grant:MAI-Voice-2.1","dn":"Grant · MAI Voice 2.1","g":"M","l":"de-DE","s":"MAI Voice 2.1","st":[],"p":[]},{"n":"de-DE-Harper:MAI-Voice-2.1","dn":"Harper · MAI Voice 2.1","g":"F","l":"de-DE","s":"MAI Voice 2.1","st":[],"p":[]},{"n":"de-DE-Klaus:MAI-Voice-2","dn":"Klaus · MAI Voice 2","g":"M","l":"de-DE","s":"MAI Voice 2","st":["angry","confused","determined","disgusted","embarrassed","excited","fearful","happy","hopeful","jealous","joyful","regretful","relieved","sad","shouting","softvoice","surprised","whispering"],"p":[]},{"n":"de-DE-Klaus:MAI-Voice-2.1","dn":"Klaus · MAI Voice 2.1","g":"M","l":"de-DE","s":"MAI Voice 2.1","st":["angry","confused","determined","disgusted","embarrassed","excited","fearful","happy","hopeful","jealous","joyful","regretful","relieved","sad","shouting","softvoice","surprised","whispering"],"p":[]},{"n":"de-DE-Mia:MAI-Voice-2","dn":"Mia · MAI Voice 2","g":"F","l":"de-DE","s":"MAI Voice 2","st":["angry","confused","determined","disgusted","embarrassed","excited","fearful","happy","hopeful","jealous","joyful","regretful","relieved","sad","shouting","softvoice","surprised","whispering"],"p":[]},{"n":"de-DE-Mia:MAI-Voice-2.1","dn":"Mia · MAI Voice 2.1","g":"F","l":"de-DE","s":"MAI Voice 2.1","st":["angry","confused","determined","disgusted","embarrassed","excited","fearful","happy","hopeful","jealous","joyful","regretful","relieved","sad","shouting","softvoice","surprised","whispering"],"p":[]},{"n":"el-GR-AthinaNeural","dn":"Athina","g":"F","l":"el-GR","s":"","st":[],"p":[]},{"n":"el-GR-NestorasNeural","dn":"Nestoras","g":"M","l":"el-GR","s":"","st":[],"p":[]},{"n":"el-GR-Athina:DragonHDLatestNeural","dn":"Athina · Dragon HD","g":"F","l":"el-GR","s":"Dragon HD","st":[],"p":["Crisp","Bright","Clear"]},{"n":"en-AU-WilliamMultilingualNeural","dn":"William · 多语言","g":"M","l":"en-AU","s":"","st":[],"p":["Warm","Cheerful","Casual","Friendly","Pleasant"]},{"n":"en-AU-NatashaNeural","dn":"Natasha","g":"F","l":"en-AU","s":"","st":[],"p":["Crisp","Bright","Clear"]},{"n":"en-AU-WilliamNeural","dn":"William","g":"M","l":"en-AU","s":"","st":[],"p":["Engaging","Strong"]},{"n":"en-AU-AnnetteNeural","dn":"Annette","g":"F","l":"en-AU","s":"","st":[],"p":[]},{"n":"en-AU-CarlyNeural","dn":"Carly","g":"F","l":"en-AU","s":"","st":[],"p":["Crisp","Cheerful","Bright"]},{"n":"en-AU-DarrenNeural","dn":"Darren","g":"M","l":"en-AU","s":"","st":[],"p":[]},{"n":"en-AU-DuncanNeural","dn":"Duncan","g":"M","l":"en-AU","s":"","st":[],"p":[]},{"n":"en-AU-ElsieNeural","dn":"Elsie","g":"F","l":"en-AU","s":"","st":[],"p":[]},{"n":"en-AU-FreyaNeural","dn":"Freya","g":"F","l":"en-AU","s":"","st":[],"p":[]},{"n":"en-AU-JoanneNeural","dn":"Joanne","g":"F","l":"en-AU","s":"","st":[],"p":[]},{"n":"en-AU-KenNeural","dn":"Ken","g":"M","l":"en-AU","s":"","st":[],"p":[]},{"n":"en-AU-KimNeural","dn":"Kim","g":"F","l":"en-AU","s":"","st":[],"p":[]},{"n":"en-AU-NeilNeural","dn":"Neil","g":"M","l":"en-AU","s":"","st":[],"p":[]},{"n":"en-AU-TimNeural","dn":"Tim","g":"M","l":"en-AU","s":"","st":[],"p":[]},{"n":"en-AU-TinaNeural","dn":"Tina","g":"F","l":"en-AU","s":"","st":[],"p":[]},{"n":"en-AU-Isla:MAI-Voice-2-Flash","dn":"Isla · MAI Voice 2 Flash","g":"F","l":"en-AU","s":"MAI Voice 2 Flash","st":["angry","confused","determined","disgusted","embarrassed","excited","fearful","happy","hopeful","jealous","joyful","regretful","relieved","sad","shouting","softvoice","surprised","whispering"],"p":[]},{"n":"en-AU-Lisa:MAI-Voice-2.1-Flash","dn":"Lisa · MAI Voice 2.1 Flash","g":"F","l":"en-AU","s":"MAI Voice 2.1 Flash","st":["angry","confused","determined","disgusted","embarrassed","excited","fearful","happy","hopeful","jealous","joyful","regretful","relieved","sad","shouting","softvoice","surprised","whispering"],"p":[]},{"n":"en-au-cyanspark:DragonHDOmniLatestNeural","dn":"cyanspark · Dragon HD Omni","g":"F","l":"en-AU","s":"Dragon HD Omni","st":[],"p":[]},{"n":"en-AU-Isla:MAI-Voice-2","dn":"Isla · MAI Voice 2","g":"F","l":"en-AU","s":"MAI Voice 2","st":["angry","confused","determined","disgusted","embarrassed","excited","fearful","happy","hopeful","jealous","joyful","regretful","relieved","sad","shouting","softvoice","surprised","whispering"],"p":[]},{"n":"en-AU-Lisa:MAI-Voice-2.1","dn":"Lisa · MAI Voice 2.1","g":"F","l":"en-AU","s":"MAI Voice 2.1","st":["angry","confused","determined","disgusted","embarrassed","excited","fearful","happy","hopeful","jealous","joyful","regretful","relieved","sad","shouting","softvoice","surprised","whispering"],"p":[]},{"n":"en-au-siennatopaz:DragonHDOmniLatestNeural","dn":"siennatopaz · Dragon HD Omni","g":"F","l":"en-AU","s":"Dragon HD Omni","st":[],"p":[]},{"n":"en-CA-ClaraNeural","dn":"Clara","g":"F","l":"en-CA","s":"","st":[],"p":["Crisp","Bright","Clear"]},{"n":"en-CA-LiamNeural","dn":"Liam","g":"M","l":"en-CA","s":"","st":[],"p":[]},{"n":"en-GB-Ada:DragonHDLatestNeural","dn":"Ada · Dragon HD","g":"F","l":"en-GB","s":"Dragon HD","st":[],"p":[]},{"n":"en-GB-Ollie:DragonHDLatestNeural","dn":"Ollie · Dragon HD","g":"M","l":"en-GB","s":"Dragon HD","st":[],"p":[]},{"n":"en-GB-AdaMultilingualNeural","dn":"Ada · 多语言","g":"F","l":"en-GB","s":"","st":[],"p":["Cheerful","Warm","Gentle","Friendly"]},{"n":"en-GB-OllieMultilingualNeural","dn":"Ollie · 多语言","g":"M","l":"en-GB","s":"","st":[],"p":["Warm","Cheerful","Casual","Friendly","Pleasant"]},{"n":"en-GB-SoniaNeural","dn":"Sonia","g":"F","l":"en-GB","s":"","st":["cheerful","sad"],"p":["Gentle","Soft"]},{"n":"en-GB-RyanNeural","dn":"Ryan","g":"M","l":"en-GB","s":"","st":["cheerful","chat","whispering","sad"],"p":["Bright","Engaging"]},{"n":"en-GB-LibbyNeural","dn":"Libby","g":"F","l":"en-GB","s":"","st":[],"p":["Crisp","Bright","Clear"]},{"n":"en-GB-AbbiNeural","dn":"Abbi","g":"F","l":"en-GB","s":"","st":[],"p":[]},{"n":"en-GB-AlfieNeural","dn":"Alfie","g":"M","l":"en-GB","s":"","st":[],"p":[]},{"n":"en-GB-BellaNeural","dn":"Bella","g":"F","l":"en-GB","s":"","st":[],"p":[]},{"n":"en-GB-ElliotNeural","dn":"Elliot","g":"M","l":"en-GB","s":"","st":[],"p":[]},{"n":"en-GB-EthanNeural","dn":"Ethan","g":"M","l":"en-GB","s":"","st":[],"p":[]},{"n":"en-GB-HollieNeural","dn":"Hollie","g":"F","l":"en-GB","s":"","st":[],"p":[]},{"n":"en-GB-MaisieNeural","dn":"Maisie","g":"F","l":"en-GB","s":"","st":[],"p":["Crisp","Cheerful","Bright"]},{"n":"en-GB-NoahNeural","dn":"Noah","g":"M","l":"en-GB","s":"","st":[],"p":[]},{"n":"en-GB-OliverNeural","dn":"Oliver","g":"M","l":"en-GB","s":"","st":[],"p":[]},{"n":"en-GB-OliviaNeural","dn":"Olivia","g":"F","l":"en-GB","s":"","st":[],"p":[]},{"n":"en-GB-ThomasNeural","dn":"Thomas","g":"M","l":"en-GB","s":"","st":[],"p":[]},{"n":"en-GB-MiaNeural","dn":"Mia","g":"F","l":"en-GB","s":"","st":[],"p":[]},{"n":"en-GB-Ryan:DragonHDLatestNeural","dn":"Ryan · Dragon HD","g":"M","l":"en-GB","s":"Dragon HD","st":[],"p":[]},{"n":"en-GB-Sonia:DragonHDLatestNeural","dn":"Sonia · Dragon HD","g":"F","l":"en-GB","s":"Dragon HD","st":[],"p":[]},{"n":"en-HK-YanNeural","dn":"Yan","g":"F","l":"en-HK","s":"","st":[],"p":[]},{"n":"en-HK-SamNeural","dn":"Sam","g":"M","l":"en-HK","s":"","st":[],"p":[]},{"n":"en-IE-EmilyNeural","dn":"Emily","g":"F","l":"en-IE","s":"","st":[],"p":[]},{"n":"en-IE-ConnorNeural","dn":"Connor","g":"M","l":"en-IE","s":"","st":[],"p":["Light-Hearted","Whimsical","Friendly"]},{"n":"en-IN-Diya:DragonHDLatestNeural","dn":"Diya · Dragon HD","g":"F","l":"en-IN","s":"Dragon HD","st":[],"p":[]},{"n":"en-IN-Lavanya:DragonHDLatestNeural","dn":"Lavanya · Dragon HD","g":"F","l":"en-IN","s":"Dragon HD","st":[],"p":[]},{"n":"en-IN-Meera:DragonHDLatestNeural","dn":"Meera · Dragon HD","g":"F","l":"en-IN","s":"Dragon HD","st":[],"p":[]},{"n":"en-IN-Aarti:DragonHDLatestNeural","dn":"Aarti · Dragon HD","g":"F","l":"en-IN","s":"Dragon HD","st":[],"p":[]},{"n":"en-IN-Arjun:DragonHDLatestNeural","dn":"Arjun · Dragon HD","g":"M","l":"en-IN","s":"Dragon HD","st":[],"p":[]},{"n":"en-IN-Neerja:DragonHDLatestNeural","dn":"Neerja · Dragon HD","g":"F","l":"en-IN","s":"Dragon HD","st":[],"p":[]},{"n":"en-IN-AartiIndicNeural","dn":"AartiIndic","g":"F","l":"en-IN","s":"","st":[],"p":[]},{"n":"en-IN-ArjunIndicNeural","dn":"ArjunIndic","g":"M","l":"en-IN","s":"","st":[],"p":[]},{"n":"en-IN-NeerjaIndicNeural","dn":"NeerjaIndic","g":"F","l":"en-IN","s":"","st":[],"p":[]},{"n":"en-IN-PrabhatIndicNeural","dn":"PrabhatIndic","g":"M","l":"en-IN","s":"","st":[],"p":[]},{"n":"en-IN-AaravNeural","dn":"Aarav","g":"M","l":"en-IN","s":"","st":[],"p":[]},{"n":"en-IN-AashiNeural","dn":"Aashi","g":"F","l":"en-IN","s":"","st":[],"p":[]},{"n":"en-IN-AartiNeural","dn":"Aarti","g":"F","l":"en-IN","s":"","st":[],"p":[]},{"n":"en-IN-ArjunNeural","dn":"Arjun","g":"M","l":"en-IN","s":"","st":[],"p":[]},{"n":"en-IN-AnanyaNeural","dn":"Ananya","g":"F","l":"en-IN","s":"","st":[],"p":[]},{"n":"en-IN-KavyaNeural","dn":"Kavya","g":"F","l":"en-IN","s":"","st":[],"p":[]},{"n":"en-IN-KunalNeural","dn":"Kunal","g":"M","l":"en-IN","s":"","st":[],"p":[]},{"n":"en-IN-NeerjaNeural","dn":"Neerja","g":"F","l":"en-IN","s":"","st":["newscast","cheerful","empathetic"],"p":[]},{"n":"en-IN-PrabhatNeural","dn":"Prabhat","g":"M","l":"en-IN","s":"","st":[],"p":[]},{"n":"en-IN-RehaanNeural","dn":"Rehaan","g":"M","l":"en-IN","s":"","st":[],"p":[]},{"n":"en-KE-AsiliaNeural","dn":"Asilia","g":"F","l":"en-KE","s":"","st":[],"p":[]},{"n":"en-KE-ChilembaNeural","dn":"Chilemba","g":"M","l":"en-KE","s":"","st":[],"p":[]},{"n":"en-NG-EzinneNeural","dn":"Ezinne","g":"F","l":"en-NG","s":"","st":[],"p":[]},{"n":"en-NG-AbeoNeural","dn":"Abeo","g":"M","l":"en-NG","s":"","st":[],"p":[]},{"n":"en-NZ-MollyNeural","dn":"Molly","g":"F","l":"en-NZ","s":"","st":[],"p":[]},{"n":"en-NZ-MitchellNeural","dn":"Mitchell","g":"M","l":"en-NZ","s":"","st":[],"p":[]},{"n":"en-PH-RosaNeural","dn":"Rosa","g":"F","l":"en-PH","s":"","st":[],"p":[]},{"n":"en-PH-JamesNeural","dn":"James","g":"M","l":"en-PH","s":"","st":[],"p":[]},{"n":"en-SG-LunaNeural","dn":"Luna","g":"F","l":"en-SG","s":"","st":[],"p":[]},{"n":"en-SG-WayneNeural","dn":"Wayne","g":"M","l":"en-SG","s":"","st":[],"p":[]},{"n":"en-TZ-ImaniNeural","dn":"Imani","g":"F","l":"en-TZ","s":"","st":[],"p":[]},{"n":"en-TZ-ElimuNeural","dn":"Elimu","g":"M","l":"en-TZ","s":"","st":[],"p":[]},{"n":"en-US-Ava:DragonHDLatestNeural","dn":"Ava · Dragon HD","g":"F","l":"en-US","s":"Dragon HD","st":[],"p":["Pleasant","Friendly","Caring"]},{"n":"en-US-Andrew:DragonHDLatestNeural","dn":"Andrew · Dragon HD","g":"M","l":"en-US","s":"Dragon HD","st":[],"p":["Confident","Casual","Warm"]},{"n":"en-US-Adam:DragonHDLatestNeural","dn":"Adam · Dragon HD","g":"M","l":"en-US","s":"Dragon HD","st":[],"p":[]},{"n":"en-US-Alloy:DragonHDLatestNeural","dn":"Alloy · Dragon HD","g":"M","l":"en-US","s":"Dragon HD","st":[],"p":[]},{"n":"en-US-Aria:DragonHDLatestNeural","dn":"Aria · Dragon HD","g":"F","l":"en-US","s":"Dragon HD","st":[],"p":["Confident","Authentic","Warm"]},{"n":"en-US-Bree:DragonHDLatestNeural","dn":"Bree · Dragon HD","g":"F","l":"en-US","s":"Dragon HD","st":[],"p":["Sincere","Calm","Approachable"]},{"n":"en-US-Brian:DragonHDLatestNeural","dn":"Brian · Dragon HD","g":"M","l":"en-US","s":"Dragon HD","st":[],"p":["Sincere","Calm","Approachable"]},{"n":"en-US-Davis:DragonHDLatestNeural","dn":"Davis · Dragon HD","g":"M","l":"en-US","s":"Dragon HD","st":[],"p":["Calm","Smooth","Soothing"]},{"n":"en-US-Emma:DragonHDLatestNeural","dn":"Emma · Dragon HD","g":"F","l":"en-US","s":"Dragon HD","st":[],"p":["Cheerful","Light-Hearted","Casual"]},{"n":"en-US-Jane:DragonHDLatestNeural","dn":"Jane · Dragon HD","g":"F","l":"en-US","s":"Dragon HD","st":[],"p":[]},{"n":"en-US-Jenny:DragonHDLatestNeural","dn":"Jenny · Dragon HD","g":"F","l":"en-US","s":"Dragon HD","st":[],"p":["Sincere","Pleasant","Approachable"]},{"n":"en-US-Nova:DragonHDLatestNeural","dn":"Nova · Dragon HD","g":"F","l":"en-US","s":"Dragon HD","st":[],"p":[]},{"n":"en-US-Phoebe:DragonHDLatestNeural","dn":"Phoebe · Dragon HD","g":"F","l":"en-US","s":"Dragon HD","st":[],"p":[]},{"n":"en-US-Serena:DragonHDLatestNeural","dn":"Serena · Dragon HD","g":"F","l":"en-US","s":"Dragon HD","st":[],"p":[]},{"n":"en-US-Steffan:DragonHDLatestNeural","dn":"Steffan · Dragon HD","g":"M","l":"en-US","s":"Dragon HD","st":[],"p":["Mature","Authentic","Warm"]},{"n":"en-US-Andrew:DragonHDOmniLatestNeural","dn":"Andrew · Dragon HD Omni","g":"M","l":"en-US","s":"Dragon HD Omni","st":[],"p":[]},{"n":"en-US-Brian:DragonHDOmniLatestNeural","dn":"Brian · Dragon HD Omni","g":"M","l":"en-US","s":"Dragon HD Omni","st":[],"p":[]},{"n":"en-US-Caleb:DragonHDOmniLatestNeural","dn":"Caleb · Dragon HD Omni","g":"M","l":"en-US","s":"Dragon HD Omni","st":[],"p":[]},{"n":"en-US-Dana:DragonHDOmniLatestNeural","dn":"Dana · Dragon HD Omni","g":"F","l":"en-US","s":"Dragon HD Omni","st":[],"p":[]},{"n":"en-US-Lewis:DragonHDOmniLatestNeural","dn":"Lewis · Dragon HD Omni","g":"M","l":"en-US","s":"Dragon HD Omni","st":[],"p":[]},{"n":"en-US-Phoebe:DragonHDOmniLatestNeural","dn":"Phoebe · Dragon HD Omni","g":"F","l":"en-US","s":"Dragon HD Omni","st":[],"p":[]},{"n":"en-US-AvaMultilingualNeural","dn":"Ava · 多语言","g":"F","l":"en-US","s":"","st":[],"p":["Pleasant","Friendly","Caring"]},{"n":"en-US-AndrewMultilingualNeural","dn":"Andrew · 多语言","g":"M","l":"en-US","s":"","st":["empathetic","relieved"],"p":["Confident","Casual","Warm"]},{"n":"en-US-AmandaMultilingualNeural","dn":"Amanda · 多语言","g":"F","l":"en-US","s":"","st":[],"p":["clear","bright","youthful"]},{"n":"en-US-AdamMultilingualNeural","dn":"Adam · 多语言","g":"M","l":"en-US","s":"","st":[],"p":["warm","engaging","deep"]},{"n":"en-US-EmmaMultilingualNeural","dn":"Emma · 多语言","g":"F","l":"en-US","s":"","st":[],"p":["Cheerful","Light-Hearted","Casual"]},{"n":"en-US-PhoebeMultilingualNeural","dn":"Phoebe · 多语言","g":"F","l":"en-US","s":"","st":["empathetic","sad","serious"],"p":["youthful","upbeat","confident"]},{"n":"en-US-AlloyTurboMultilingualNeural","dn":"AlloyTurbo · 多语言","g":"M","l":"en-US","s":"","st":[],"p":["Versatile"]},{"n":"en-US-EchoTurboMultilingualNeural","dn":"EchoTurbo · 多语言","g":"M","l":"en-US","s":"","st":[],"p":[]},{"n":"en-US-FableTurboMultilingualNeural","dn":"FableTurbo · 多语言","g":"N","l":"en-US","s":"","st":[],"p":[]},{"n":"en-US-OnyxTurboMultilingualNeural","dn":"OnyxTurbo · 多语言","g":"M","l":"en-US","s":"","st":[],"p":[]},{"n":"en-US-NovaTurboMultilingualNeural","dn":"NovaTurbo · 多语言","g":"F","l":"en-US","s":"","st":[],"p":["Deep","Resonant"]},{"n":"en-US-ShimmerTurboMultilingualNeural","dn":"ShimmerTurbo · 多语言","g":"F","l":"en-US","s":"","st":[],"p":[]},{"n":"en-US-BrianMultilingualNeural","dn":"Brian · 多语言","g":"M","l":"en-US","s":"","st":[],"p":["Sincere","Calm","Approachable"]},{"n":"en-US-AvaNeural","dn":"Ava","g":"F","l":"en-US","s":"","st":["angry","fearful","sad"],"p":["Pleasant","Caring","Friendly"]},{"n":"en-US-AndrewNeural","dn":"Andrew","g":"M","l":"en-US","s":"","st":[],"p":["Confident","Authentic","Warm"]},{"n":"en-US-EmmaNeural","dn":"Emma","g":"F","l":"en-US","s":"","st":[],"p":["Cheerful","Light-Hearted","Casual"]},{"n":"en-US-BrianNeural","dn":"Brian","g":"M","l":"en-US","s":"","st":[],"p":["Sincere","Calm","Approachable"]},{"n":"en-US-JennyNeural","dn":"Jenny","g":"F","l":"en-US","s":"","st":["assistant","chat","customerservice","newscast","angry","cheerful","sad","excited","friendly","terrified","shouting","unfriendly","whispering","hopeful"],"p":["Sincere","Pleasant","Approachable"]},{"n":"en-US-GuyNeural","dn":"Guy","g":"M","l":"en-US","s":"","st":["newscast","angry","cheerful","sad","excited","friendly","terrified","shouting","unfriendly","whispering","hopeful"],"p":["Light-Hearted","Whimsical","Friendly"]},{"n":"en-US-AriaNeural","dn":"Aria","g":"F","l":"en-US","s":"","st":["chat","customerservice","narration-professional","newscast-casual","newscast-formal","cheerful","empathetic","angry","sad","excited","friendly","terrified","shouting","unfriendly","whispering","hopeful"],"p":["Crisp","Bright","Clear"]},{"n":"en-US-DavisNeural","dn":"Davis","g":"M","l":"en-US","s":"","st":["chat","angry","cheerful","excited","friendly","hopeful","sad","shouting","terrified","unfriendly","whispering"],"p":["Soothing","Calm","Smooth"]},{"n":"en-US-JaneNeural","dn":"Jane","g":"F","l":"en-US","s":"","st":["angry","cheerful","excited","friendly","hopeful","sad","shouting","terrified","unfriendly","whispering"],"p":["Serious","Approachable","Upbeat"]},{"n":"en-US-JasonNeural","dn":"Jason","g":"M","l":"en-US","s":"","st":["angry","cheerful","excited","friendly","hopeful","sad","shouting","terrified","unfriendly","whispering"],"p":["Gentle","Shy","Polite"]},{"n":"en-US-KaiNeural","dn":"Kai","g":"M","l":"en-US","s":"","st":["conversation"],"p":["Sincere","Pleasant","Bright","Clear","Friendly","Warm"]},{"n":"en-US-LunaNeural","dn":"Luna","g":"F","l":"en-US","s":"","st":["conversation"],"p":["Sincere","Pleasant","Bright","Clear","Friendly","Warm"]},{"n":"en-US-SaraNeural","dn":"Sara","g":"F","l":"en-US","s":"","st":["angry","cheerful","excited","friendly","hopeful","sad","shouting","terrified","unfriendly","whispering"],"p":["Sincere","Calm","Confident"]},{"n":"en-US-TonyNeural","dn":"Tony","g":"M","l":"en-US","s":"","st":["angry","cheerful","excited","friendly","hopeful","sad","shouting","terrified","unfriendly","whispering"],"p":["Thoughtful","Authentic","Sincere"]},{"n":"en-US-NancyNeural","dn":"Nancy","g":"F","l":"en-US","s":"","st":["angry","cheerful","excited","friendly","hopeful","sad","shouting","terrified","unfriendly","whispering"],"p":["Confident","Serious","Mature"]},{"n":"en-US-CoraMultilingualNeural","dn":"Cora · 多语言","g":"F","l":"en-US","s":"","st":[],"p":["Empathetic","Formal","Sincere"]},{"n":"en-US-ChristopherMultilingualNeural","dn":"Christopher · 多语言","g":"M","l":"en-US","s":"","st":[],"p":["Deep","Warm"]},{"n":"en-US-BrandonMultilingualNeural","dn":"Brandon · 多语言","g":"M","l":"en-US","s":"","st":[],"p":["Warm","Engaging","Authentic"]},{"n":"en-US-AIGenerate1Neural","dn":"AIGenerate1","g":"M","l":"en-US","s":"","st":[],"p":["Serious","Clear","Formal"]},{"n":"en-US-AIGenerate2Neural","dn":"AIGenerate2","g":"F","l":"en-US","s":"","st":[],"p":["Serious","Mature","Formal"]},{"n":"en-US-AmberNeural","dn":"Amber","g":"F","l":"en-US","s":"","st":[],"p":["Whimsical","Upbeat","Light-Hearted"]},{"n":"en-US-AnaNeural","dn":"Ana","g":"F","l":"en-US","s":"","st":[],"p":["Curious","Cheerful","Engaging"]},{"n":"en-US-AshleyNeural","dn":"Ashley","g":"F","l":"en-US","s":"","st":[],"p":["Sincere","Approachable","Honest"]},{"n":"en-US-BrandonNeural","dn":"Brandon","g":"M","l":"en-US","s":"","st":[],"p":["Warm","Engaging","Authentic"]},{"n":"en-US-ChristopherNeural","dn":"Christopher","g":"M","l":"en-US","s":"","st":[],"p":["Deep","Warm"]},{"n":"en-US-CoraNeural","dn":"Cora","g":"F","l":"en-US","s":"","st":[],"p":["Empathetic","Formal","Sincere"]},{"n":"en-US-DavisMultilingualNeural","dn":"Davis · 多语言","g":"M","l":"en-US","s":"","st":["empathetic","funny","relieved"],"p":["soothing","calm","smooth"]},{"n":"en-US-DerekMultilingualNeural","dn":"Derek · 多语言","g":"M","l":"en-US","s":"","st":["empathetic","excited","relieved","shy"],"p":["confident","knowledgable","formal"]},{"n":"en-US-DustinMultilingualNeural","dn":"Dustin · 多语言","g":"M","l":"en-US","s":"","st":[],"p":["youthful","clear","thoughtful"]},{"n":"en-US-ElizabethNeural","dn":"Elizabeth","g":"F","l":"en-US","s":"","st":[],"p":["Authoritative","Formal","Serious"]},{"n":"en-US-EricNeural","dn":"Eric","g":"M","l":"en-US","s":"","st":[],"p":["Confident","Sincere","Warm"]},{"n":"en-US-EvelynMultilingualNeural","dn":"Evelyn · 多语言","g":"F","l":"en-US","s":"","st":[],"p":["Youthful","Crisp","Upbeat"]},{"n":"en-US-JacobNeural","dn":"Jacob","g":"M","l":"en-US","s":"","st":[],"p":["Sincere","Formal","Confident"]},{"n":"en-US-JennyMultilingualNeural","dn":"Jenny · 多语言","g":"F","l":"en-US","s":"","st":[],"p":["Sincere","Pleasant","Approachable"]},{"n":"en-US-Jimmie:DragonHDFlashLatestNeural","dn":"Jimmie · Dragon HD Flash","g":"M","l":"en-US","s":"Dragon HD Flash","st":[],"p":[]},{"n":"en-US-LewisMultilingualNeural","dn":"Lewis · 多语言","g":"M","l":"en-US","s":"","st":[],"p":["knowledgable","formal","confident"]},{"n":"en-US-LolaMultilingualNeural","dn":"Lola · 多语言","g":"F","l":"en-US","s":"","st":[],"p":["sincere","calm","warm"]},{"n":"en-US-MichelleNeural","dn":"Michelle","g":"F","l":"en-US","s":"","st":[],"p":["Confident","Authentic","Warm"]},{"n":"en-US-MonicaNeural","dn":"Monica","g":"F","l":"en-US","s":"","st":[],"p":["Mature","Authentic","Warm"]},{"n":"en-US-NancyMultilingualNeural","dn":"Nancy · 多语言","g":"F","l":"en-US","s":"","st":["excited","friendly","funny","relieved","shy"],"p":["casual","youthful","approachable"]},{"n":"en-US-RogerNeural","dn":"Roger","g":"M","l":"en-US","s":"","st":[],"p":["Serious","Formal","Confident"]},{"n":"en-US-RyanMultilingualNeural","dn":"Ryan · 多语言","g":"M","l":"en-US","s":"","st":[],"p":["Professional","Authentic","Sincere"]},{"n":"en-US-SamuelMultilingualNeural","dn":"Samuel · 多语言","g":"M","l":"en-US","s":"","st":[],"p":["sincere","warm","expressive"]},{"n":"en-US-SerenaMultilingualNeural","dn":"Serena · 多语言","g":"F","l":"en-US","s":"","st":["empathetic","excited","friendly","shy","serious","relieved","sad"],"p":["formal","confident","mature"]},{"n":"en-US-SteffanMultilingualNeural","dn":"Steffan · 多语言","g":"M","l":"en-US","s":"","st":[],"p":["Casual","Thoughtful"]},{"n":"en-US-SteffanNeural","dn":"Steffan","g":"M","l":"en-US","s":"","st":[],"p":["Mature","Authentic","Warm"]},{"n":"en-US-Tiana:DragonHDFlashLatestNeural","dn":"Tiana · Dragon HD Flash","g":"F","l":"en-US","s":"Dragon HD Flash","st":[],"p":[]},{"n":"en-US-Tyler:DragonHDFlashLatestNeural","dn":"Tyler · Dragon HD Flash","g":"M","l":"en-US","s":"Dragon HD Flash","st":[],"p":[]},{"n":"en-US-Andrew:DragonLatestNeural","dn":"Andrew · Dragon","g":"M","l":"en-US","s":"Dragon","st":[],"p":[]},{"n":"en-US-AshTurboMultilingualNeural","dn":"AshTurbo · 多语言","g":"M","l":"en-US","s":"","st":[],"p":[]},{"n":"en-US-Ava:DragonLatestNeural","dn":"Ava · Dragon","g":"F","l":"en-US","s":"Dragon","st":[],"p":[]},{"n":"en-US-BlueNeural","dn":"Blue","g":"N","l":"en-US","s":"","st":[],"p":["Formal","Serious","Confident"]},{"n":"en-US-Ethan:MAI-Voice-2-Flash","dn":"Ethan · MAI Voice 2 Flash","g":"M","l":"en-US","s":"MAI Voice 2 Flash","st":["angry","confused","determined","disgusted","embarrassed","excited","fearful","happy","hopeful","jealous","joyful","regretful","relieved","sad","shouting","softvoice","surprised","whispering"],"p":[]},{"n":"en-US-Ethan:MAI-Voice-2.1-Flash","dn":"Ethan · MAI Voice 2.1 Flash","g":"M","l":"en-US","s":"MAI Voice 2.1 Flash","st":["angry","confused","determined","disgusted","embarrassed","excited","fearful","happy","hopeful","jealous","joyful","regretful","relieved","sad","shouting","softvoice","surprised","whispering"],"p":[]},{"n":"en-US-Grant:MAI-Voice-2-Flash","dn":"Grant · MAI Voice 2 Flash","g":"M","l":"en-US","s":"MAI Voice 2 Flash","st":[],"p":[]},{"n":"en-US-Grant:MAI-Voice-2.1-Flash","dn":"Grant · MAI Voice 2.1 Flash","g":"M","l":"en-US","s":"MAI Voice 2.1 Flash","st":[],"p":[]},{"n":"en-US-Harper:MAI-Voice-2-Flash","dn":"Harper · MAI Voice 2 Flash","g":"F","l":"en-US","s":"MAI Voice 2 Flash","st":["angry","confused","determined","embarrassed","excited","happy","hopeful","joyful","regretful","relieved","sad","shouting","softvoice","whispering"],"p":[]},{"n":"en-US-Harper:MAI-Voice-2.1-Flash","dn":"Harper · MAI Voice 2.1 Flash","g":"F","l":"en-US","s":"MAI Voice 2.1 Flash","st":["angry","confused","determined","embarrassed","excited","happy","hopeful","joyful","regretful","relieved","sad","shouting","softvoice","whispering"],"p":[]},{"n":"en-US-Iris:MAI-Voice-2-Flash","dn":"Iris · MAI Voice 2 Flash","g":"F","l":"en-US","s":"MAI Voice 2 Flash","st":[],"p":[]},{"n":"en-US-Iris:MAI-Voice-2.1-Flash","dn":"Iris · MAI Voice 2.1 Flash","g":"F","l":"en-US","s":"MAI Voice 2.1 Flash","st":[],"p":[]},{"n":"en-US-Jasper:MAI-Voice-2-Flash","dn":"Jasper · MAI Voice 2 Flash","g":"M","l":"en-US","s":"MAI Voice 2 Flash","st":[],"p":[]},{"n":"en-US-Jasper:MAI-Voice-2.1-Flash","dn":"Jasper · MAI Voice 2.1 Flash","g":"M","l":"en-US","s":"MAI Voice 2.1 Flash","st":[],"p":[]},{"n":"en-US-Olivia:MAI-Voice-2-Flash","dn":"Olivia · MAI Voice 2 Flash","g":"F","l":"en-US","s":"MAI Voice 2 Flash","st":["angry","confused","determined","disgusted","embarrassed","excited","fearful","happy","hopeful","jealous","joyful","regretful","relieved","sad","shouting","softvoice","surprised","whispering"],"p":[]},{"n":"en-US-Olivia:MAI-Voice-2.1-Flash","dn":"Olivia · MAI Voice 2.1 Flash","g":"F","l":"en-US","s":"MAI Voice 2.1 Flash","st":["angry","confused","determined","disgusted","embarrassed","excited","fearful","happy","hopeful","jealous","joyful","regretful","relieved","sad","shouting","softvoice","surprised","whispering"],"p":[]},{"n":"en-US-Evelyn:DragonHDLatestNeural","dn":"Evelyn · Dragon HD","g":"F","l":"en-US","s":"Dragon HD","st":[],"p":[]},{"n":"en-US-Jimmie:DragonHDLatestNeural","dn":"Jimmie · Dragon HD","g":"M","l":"en-US","s":"Dragon HD","st":[],"p":[]},{"n":"en-US-Juno:DragonHDLatestNeural","dn":"Juno · Dragon HD","g":"M","l":"en-US","s":"Dragon HD","st":[],"p":[]},{"n":"en-US-Mila:DragonHDLatestNeural","dn":"Mila · Dragon HD","g":"F","l":"en-US","s":"Dragon HD","st":[],"p":[]},{"n":"en-US-Tessa:DragonHDLatestNeural","dn":"Tessa · Dragon HD","g":"F","l":"en-US","s":"Dragon HD","st":[],"p":[]},{"n":"en-US-Tiana:DragonHDLatestNeural","dn":"Tiana · Dragon HD","g":"F","l":"en-US","s":"Dragon HD","st":[],"p":[]},{"n":"en-US-Tyler:DragonHDLatestNeural","dn":"Tyler · Dragon HD","g":"M","l":"en-US","s":"Dragon HD","st":[],"p":[]},{"n":"en-US-Vance:DragonHDLatestNeural","dn":"Vance · Dragon HD","g":"M","l":"en-US","s":"Dragon HD","st":[],"p":[]},{"n":"en-Multitalker:DragonHDLatestNeural","dn":"Multitalker · Dragon HD","g":"N","l":"en-US","s":"Dragon HD","st":[],"p":[]},{"n":"en-US-Andrew-Preview:DragonHDLatestNeural","dn":"Preview · Dragon HD","g":"M","l":"en-US","s":"Dragon HD","st":[],"p":[]},{"n":"en-US-Ava-Preview:DragonHDLatestNeural","dn":"Preview · Dragon HD","g":"F","l":"en-US","s":"Dragon HD","st":[],"p":[]},{"n":"en-us-ava:DragonHDOmniLatestNeural","dn":"ava · Dragon HD Omni","g":"F","l":"en-US","s":"Dragon HD Omni","st":[],"p":[]},{"n":"en-us-blushzephyr:DragonHDOmniLatestNeural","dn":"blushzephyr · Dragon HD Omni","g":"F","l":"en-US","s":"Dragon HD Omni","st":[],"p":[]},{"n":"en-US-Colin:DragonHDLatestNeural","dn":"Colin · Dragon HD","g":"M","l":"en-US","s":"Dragon HD","st":[],"p":[]},{"n":"en-us-emma:DragonHDOmniLatestNeural","dn":"emma · Dragon HD Omni","g":"F","l":"en-US","s":"Dragon HD Omni","st":[],"p":[]},{"n":"en-US-Ethan:MAI-Voice-2","dn":"Ethan · MAI Voice 2","g":"M","l":"en-US","s":"MAI Voice 2","st":["angry","confused","determined","disgusted","embarrassed","excited","fearful","happy","hopeful","jealous","joyful","regretful","relieved","sad","shouting","softvoice","surprised","whispering"],"p":[]},{"n":"en-US-Ethan:MAI-Voice-2.1","dn":"Ethan · MAI Voice 2.1","g":"M","l":"en-US","s":"MAI Voice 2.1","st":["angry","confused","determined","disgusted","embarrassed","excited","fearful","happy","hopeful","jealous","joyful","regretful","relieved","sad","shouting","softvoice","surprised","whispering"],"p":[]},{"n":"en-us-goldenspark:DragonHDOmniLatestNeural","dn":"goldenspark · Dragon HD Omni","g":"M","l":"en-US","s":"Dragon HD Omni","st":[],"p":[]},{"n":"en-US-Grant:MAI-Voice-2","dn":"Grant · MAI Voice 2","g":"M","l":"en-US","s":"MAI Voice 2","st":[],"p":[]},{"n":"en-US-Grant:MAI-Voice-2.1","dn":"Grant · MAI Voice 2.1","g":"M","l":"en-US","s":"MAI Voice 2.1","st":[],"p":[]},{"n":"en-US-Harper:MAI-Voice-2","dn":"Harper · MAI Voice 2","g":"F","l":"en-US","s":"MAI Voice 2","st":["angry","confused","determined","embarrassed","excited","happy","hopeful","joyful","regretful","relieved","sad","shouting","softvoice","whispering"],"p":[]},{"n":"en-US-Harper:MAI-Voice-2.1","dn":"Harper · MAI Voice 2.1","g":"F","l":"en-US","s":"MAI Voice 2.1","st":["angry","confused","determined","embarrassed","excited","happy","hopeful","joyful","regretful","relieved","sad","shouting","softvoice","whispering"],"p":[]},{"n":"en-US-Iris:MAI-Voice-2","dn":"Iris · MAI Voice 2","g":"F","l":"en-US","s":"MAI Voice 2","st":[],"p":[]},{"n":"en-US-Iris:MAI-Voice-2.1","dn":"Iris · MAI Voice 2.1","g":"F","l":"en-US","s":"MAI Voice 2.1","st":[],"p":[]},{"n":"en-US-Jasper:MAI-Voice-2","dn":"Jasper · MAI Voice 2","g":"M","l":"en-US","s":"MAI Voice 2","st":[],"p":[]},{"n":"en-US-Jasper:MAI-Voice-2.1","dn":"Jasper · MAI Voice 2.1","g":"M","l":"en-US","s":"MAI Voice 2.1","st":[],"p":[]},{"n":"en-us-jelly:DragonHDOmniLatestNeural","dn":"jelly · Dragon HD Omni","g":"F","l":"en-US","s":"Dragon HD Omni","st":[],"p":[]},{"n":"en-US-Olivia:MAI-Voice-2","dn":"Olivia · MAI Voice 2","g":"F","l":"en-US","s":"MAI Voice 2","st":["angry","confused","determined","disgusted","embarrassed","excited","fearful","happy","hopeful","jealous","joyful","regretful","relieved","sad","shouting","softvoice","surprised","whispering"],"p":[]},{"n":"en-US-Olivia:MAI-Voice-2.1","dn":"Olivia · MAI Voice 2.1","g":"F","l":"en-US","s":"MAI Voice 2.1","st":["angry","confused","determined","disgusted","embarrassed","excited","fearful","happy","hopeful","jealous","joyful","regretful","relieved","sad","shouting","softvoice","surprised","whispering"],"p":[]},{"n":"en-US-Paige:DragonHDLatestNeural","dn":"Paige · Dragon HD","g":"F","l":"en-US","s":"Dragon HD","st":[],"p":[]},{"n":"en-US-Serena-Preview:DragonHDLatestNeural","dn":"Preview · Dragon HD","g":"F","l":"en-US","s":"Dragon HD","st":[],"p":[]},{"n":"fr-Multitalker:DragonHDLatestNeural","dn":"Multitalker · Dragon HD","g":"N","l":"en-US","s":"Dragon HD","st":[],"p":[]},{"n":"zh-Multitalker:DragonHDLatestNeural","dn":"Multitalker · Dragon HD","g":"N","l":"zh","s":"Dragon HD","st":[],"p":[]},{"n":"en-ZA-LeahNeural","dn":"Leah","g":"F","l":"en-ZA","s":"","st":[],"p":[]},{"n":"en-ZA-LukeNeural","dn":"Luke","g":"M","l":"en-ZA","s":"","st":[],"p":[]},{"n":"es-AR-ElenaNeural","dn":"Elena","g":"F","l":"es-AR","s":"","st":[],"p":["Bright","Clear"]},{"n":"es-AR-TomasNeural","dn":"Tomas","g":"M","l":"es-AR","s":"","st":[],"p":[]},{"n":"es-BO-SofiaNeural","dn":"Sofia","g":"F","l":"es-BO","s":"","st":[],"p":[]},{"n":"es-BO-MarceloNeural","dn":"Marcelo","g":"M","l":"es-BO","s":"","st":[],"p":[]},{"n":"es-CL-CatalinaNeural","dn":"Catalina","g":"F","l":"es-CL","s":"","st":[],"p":[]},{"n":"es-CL-LorenzoNeural","dn":"Lorenzo","g":"M","l":"es-CL","s":"","st":[],"p":[]},{"n":"es-CO-SalomeNeural","dn":"Salome","g":"F","l":"es-CO","s":"","st":[],"p":[]},{"n":"es-CO-GonzaloNeural","dn":"Gonzalo","g":"M","l":"es-CO","s":"","st":[],"p":[]},{"n":"es-CR-MariaNeural","dn":"Maria","g":"F","l":"es-CR","s":"","st":[],"p":[]},{"n":"es-CR-JuanNeural","dn":"Juan","g":"M","l":"es-CR","s":"","st":[],"p":[]},{"n":"es-CU-BelkysNeural","dn":"Belkys","g":"F","l":"es-CU","s":"","st":[],"p":[]},{"n":"es-CU-ManuelNeural","dn":"Manuel","g":"M","l":"es-CU","s":"","st":[],"p":[]},{"n":"es-DO-RamonaNeural","dn":"Ramona","g":"F","l":"es-DO","s":"","st":[],"p":[]},{"n":"es-DO-EmilioNeural","dn":"Emilio","g":"M","l":"es-DO","s":"","st":[],"p":[]},{"n":"es-EC-AndreaNeural","dn":"Andrea","g":"F","l":"es-EC","s":"","st":[],"p":[]},{"n":"es-EC-LuisNeural","dn":"Luis","g":"M","l":"es-EC","s":"","st":[],"p":[]},{"n":"es-ES-Ximena:DragonHDLatestNeural","dn":"Ximena · Dragon HD","g":"F","l":"es-ES","s":"Dragon HD","st":[],"p":[]},{"n":"es-ES-Tristan:DragonHDLatestNeural","dn":"Tristan · Dragon HD","g":"M","l":"es-ES","s":"Dragon HD","st":[],"p":[]},{"n":"es-ES-ElviraNeural","dn":"Elvira","g":"F","l":"es-ES","s":"","st":[],"p":["Bright","Clear"]},{"n":"es-ES-AlvaroNeural","dn":"Alvaro","g":"M","l":"es-ES","s":"","st":["cheerful","sad"],"p":["Confident","Animated"]},{"n":"es-ES-ArabellaMultilingualNeural","dn":"Arabella · 多语言","g":"F","l":"es-ES","s":"","st":[],"p":["Cheerful","Friendly","Casual","Warm","Pleasant"]},{"n":"es-ES-IsidoraMultilingualNeural","dn":"Isidora · 多语言","g":"F","l":"es-ES","s":"","st":[],"p":["Cheerful","Friendly","Warm","Casual"]},{"n":"es-ES-TristanMultilingualNeural","dn":"Tristan · 多语言","g":"M","l":"es-ES","s":"","st":[],"p":["Formal","Clear","Trusthworthy"]},{"n":"es-ES-XimenaMultilingualNeural","dn":"Ximena · 多语言","g":"F","l":"es-ES","s":"","st":[],"p":["Formal","Serious","Upbeat"]},{"n":"es-ES-AbrilNeural","dn":"Abril","g":"F","l":"es-ES","s":"","st":[],"p":[]},{"n":"es-ES-ArnauNeural","dn":"Arnau","g":"M","l":"es-ES","s":"","st":[],"p":[]},{"n":"es-ES-DarioNeural","dn":"Dario","g":"M","l":"es-ES","s":"","st":[],"p":[]},{"n":"es-ES-EliasNeural","dn":"Elias","g":"M","l":"es-ES","s":"","st":[],"p":[]},{"n":"es-ES-EstrellaNeural","dn":"Estrella","g":"F","l":"es-ES","s":"","st":[],"p":[]},{"n":"es-ES-IreneNeural","dn":"Irene","g":"F","l":"es-ES","s":"","st":[],"p":["Curious","Cheerful"]},{"n":"es-ES-LaiaNeural","dn":"Laia","g":"F","l":"es-ES","s":"","st":[],"p":[]},{"n":"es-ES-LiaNeural","dn":"Lia","g":"F","l":"es-ES","s":"","st":[],"p":["Animated","Bright"]},{"n":"es-ES-NilNeural","dn":"Nil","g":"M","l":"es-ES","s":"","st":[],"p":[]},{"n":"es-ES-SaulNeural","dn":"Saul","g":"M","l":"es-ES","s":"","st":[],"p":[]},{"n":"es-ES-TeoNeural","dn":"Teo","g":"M","l":"es-ES","s":"","st":[],"p":[]},{"n":"es-ES-TrianaNeural","dn":"Triana","g":"F","l":"es-ES","s":"","st":[],"p":[]},{"n":"es-ES-VeraNeural","dn":"Vera","g":"F","l":"es-ES","s":"","st":[],"p":[]},{"n":"es-ES-XimenaNeural","dn":"Ximena","g":"F","l":"es-ES","s":"","st":[],"p":["Crisp","Cheerful"]},{"n":"es-ES-Marta:MAI-Voice-2-Flash","dn":"Marta · MAI Voice 2 Flash","g":"F","l":"es-ES","s":"MAI Voice 2 Flash","st":["adventurous","caringempathy","curious","encouraging","excited","friendlycheerful","nostalgic","reflective","saddisappointed","serious"],"p":[]},{"n":"es-ES-Marta:MAI-Voice-2.1-Flash","dn":"Marta · MAI Voice 2.1 Flash","g":"F","l":"es-ES","s":"MAI Voice 2.1 Flash","st":["adventurous","caringempathy","curious","encouraging","excited","friendlycheerful","nostalgic","reflective","saddisappointed","serious"],"p":[]},{"n":"es-ES-Marta:MAI-Voice-2","dn":"Marta · MAI Voice 2","g":"F","l":"es-ES","s":"MAI Voice 2","st":["adventurous","caringempathy","curious","encouraging","excited","friendlycheerful","nostalgic","reflective","saddisappointed","serious"],"p":[]},{"n":"es-ES-Marta:MAI-Voice-2.1","dn":"Marta · MAI Voice 2.1","g":"F","l":"es-ES","s":"MAI Voice 2.1","st":["adventurous","caringempathy","curious","encouraging","excited","friendlycheerful","nostalgic","reflective","saddisappointed","serious"],"p":[]},{"n":"es-GQ-TeresaNeural","dn":"Teresa","g":"F","l":"es-GQ","s":"","st":[],"p":[]},{"n":"es-GQ-JavierNeural","dn":"Javier","g":"M","l":"es-GQ","s":"","st":[],"p":[]},{"n":"es-GT-MartaNeural","dn":"Marta","g":"F","l":"es-GT","s":"","st":[],"p":[]},{"n":"es-GT-AndresNeural","dn":"Andres","g":"M","l":"es-GT","s":"","st":[],"p":[]},{"n":"es-HN-KarlaNeural","dn":"Karla","g":"F","l":"es-HN","s":"","st":[],"p":[]},{"n":"es-HN-CarlosNeural","dn":"Carlos","g":"M","l":"es-HN","s":"","st":[],"p":[]},{"n":"es-MX-DaliaNeural","dn":"Dalia","g":"F","l":"es-MX","s":"","st":["cheerful","sad","whispering"],"p":["Bright","Upbeat"]},{"n":"es-MX-JorgeNeural","dn":"Jorge","g":"M","l":"es-MX","s":"","st":["cheerful","chat","whispering","sad","excited"],"p":["Curious","Deep","Confident"]},{"n":"es-MX-DaliaMultilingualNeural","dn":"Dalia · 多语言","g":"F","l":"es-MX","s":"","st":[],"p":["Warm","Cheerful","Casual","Friendly","Pleasant"]},{"n":"es-MX-JorgeMultilingualNeural","dn":"Jorge · 多语言","g":"M","l":"es-MX","s":"","st":[],"p":["Warm","Cheerful","Casual","Friendly","Pleasant"]},{"n":"es-MX-BeatrizNeural","dn":"Beatriz","g":"F","l":"es-MX","s":"","st":[],"p":[]},{"n":"es-MX-CandelaNeural","dn":"Candela","g":"F","l":"es-MX","s":"","st":[],"p":[]},{"n":"es-MX-CarlotaNeural","dn":"Carlota","g":"F","l":"es-MX","s":"","st":[],"p":[]},{"n":"es-MX-CecilioNeural","dn":"Cecilio","g":"M","l":"es-MX","s":"","st":[],"p":[]},{"n":"es-MX-GerardoNeural","dn":"Gerardo","g":"M","l":"es-MX","s":"","st":[],"p":[]},{"n":"es-MX-LarissaNeural","dn":"Larissa","g":"F","l":"es-MX","s":"","st":[],"p":[]},{"n":"es-MX-LibertoNeural","dn":"Liberto","g":"M","l":"es-MX","s":"","st":[],"p":[]},{"n":"es-MX-LucianoNeural","dn":"Luciano","g":"M","l":"es-MX","s":"","st":[],"p":[]},{"n":"es-MX-MarinaNeural","dn":"Marina","g":"F","l":"es-MX","s":"","st":[],"p":["Curious","Cheerful"]},{"n":"es-MX-NuriaNeural","dn":"Nuria","g":"F","l":"es-MX","s":"","st":[],"p":[]},{"n":"es-MX-PelayoNeural","dn":"Pelayo","g":"M","l":"es-MX","s":"","st":[],"p":[]},{"n":"es-MX-RenataNeural","dn":"Renata","g":"F","l":"es-MX","s":"","st":[],"p":[]},{"n":"es-MX-YagoNeural","dn":"Yago","g":"M","l":"es-MX","s":"","st":[],"p":[]},{"n":"es-MX-Alejo:MAI-Voice-2-Flash","dn":"Alejo · MAI Voice 2 Flash","g":"M","l":"es-MX","s":"MAI Voice 2 Flash","st":["angry","confused","determined","disgusted","embarrassed","excited","fearful","happy","hopeful","jealous","joyful","regretful","relieved","sad","shouting","softvoice","surprised","whispering"],"p":[]},{"n":"es-MX-Alejo:MAI-Voice-2.1-Flash","dn":"Alejo · MAI Voice 2.1 Flash","g":"M","l":"es-MX","s":"MAI Voice 2.1 Flash","st":["angry","confused","determined","disgusted","embarrassed","excited","fearful","happy","hopeful","jealous","joyful","regretful","relieved","sad","shouting","softvoice","surprised","whispering"],"p":[]},{"n":"es-MX-Grant:MAI-Voice-2.1-Flash","dn":"Grant · MAI Voice 2.1 Flash","g":"M","l":"es-MX","s":"MAI Voice 2.1 Flash","st":[],"p":[]},{"n":"es-MX-Harper:MAI-Voice-2.1-Flash","dn":"Harper · MAI Voice 2.1 Flash","g":"F","l":"es-MX","s":"MAI Voice 2.1 Flash","st":[],"p":[]},{"n":"es-MX-Valeria:MAI-Voice-2-Flash","dn":"Valeria · MAI Voice 2 Flash","g":"F","l":"es-MX","s":"MAI Voice 2 Flash","st":["angry","confused","determined","disgusted","embarrassed","excited","fearful","happy","hopeful","jealous","joyful","regretful","relieved","sad","shouting","softvoice","surprised","whispering"],"p":[]},{"n":"es-MX-Valeria:MAI-Voice-2.1-Flash","dn":"Valeria · MAI Voice 2.1 Flash","g":"F","l":"es-MX","s":"MAI Voice 2.1 Flash","st":["angry","confused","determined","disgusted","embarrassed","excited","fearful","happy","hopeful","jealous","joyful","regretful","relieved","sad","shouting","softvoice","surprised","whispering"],"p":[]},{"n":"es-MX-Alejo:MAI-Voice-2","dn":"Alejo · MAI Voice 2","g":"M","l":"es-MX","s":"MAI Voice 2","st":["angry","confused","determined","disgusted","embarrassed","excited","fearful","happy","hopeful","jealous","joyful","regretful","relieved","sad","shouting","softvoice","surprised","whispering"],"p":[]},{"n":"es-MX-Alejo:MAI-Voice-2.1","dn":"Alejo · MAI Voice 2.1","g":"M","l":"es-MX","s":"MAI Voice 2.1","st":["angry","confused","determined","disgusted","embarrassed","excited","fearful","happy","hopeful","jealous","joyful","regretful","relieved","sad","shouting","softvoice","surprised","whispering"],"p":[]},{"n":"es-MX-Dalia:DragonHDLatestNeural","dn":"Dalia · Dragon HD","g":"F","l":"es-MX","s":"Dragon HD","st":[],"p":[]},{"n":"es-MX-Grant:MAI-Voice-2.1","dn":"Grant · MAI Voice 2.1","g":"M","l":"es-MX","s":"MAI Voice 2.1","st":[],"p":[]},{"n":"es-MX-Harper:MAI-Voice-2.1","dn":"Harper · MAI Voice 2.1","g":"F","l":"es-MX","s":"MAI Voice 2.1","st":[],"p":[]},{"n":"es-MX-Jorge:DragonHDLatestNeural","dn":"Jorge · Dragon HD","g":"M","l":"es-MX","s":"Dragon HD","st":[],"p":[]},{"n":"es-MX-Valeria:MAI-Voice-2","dn":"Valeria · MAI Voice 2","g":"F","l":"es-MX","s":"MAI Voice 2","st":["angry","confused","determined","disgusted","embarrassed","excited","fearful","happy","hopeful","jealous","joyful","regretful","relieved","sad","shouting","softvoice","surprised","whispering"],"p":[]},{"n":"es-MX-Valeria:MAI-Voice-2.1","dn":"Valeria · MAI Voice 2.1","g":"F","l":"es-MX","s":"MAI Voice 2.1","st":["angry","confused","determined","disgusted","embarrassed","excited","fearful","happy","hopeful","jealous","joyful","regretful","relieved","sad","shouting","softvoice","surprised","whispering"],"p":[]},{"n":"es-NI-YolandaNeural","dn":"Yolanda","g":"F","l":"es-NI","s":"","st":[],"p":[]},{"n":"es-NI-FedericoNeural","dn":"Federico","g":"M","l":"es-NI","s":"","st":[],"p":[]},{"n":"es-PA-MargaritaNeural","dn":"Margarita","g":"F","l":"es-PA","s":"","st":[],"p":[]},{"n":"es-PA-RobertoNeural","dn":"Roberto","g":"M","l":"es-PA","s":"","st":[],"p":[]},{"n":"es-PE-CamilaNeural","dn":"Camila","g":"F","l":"es-PE","s":"","st":[],"p":[]},{"n":"es-PE-AlexNeural","dn":"Alex","g":"M","l":"es-PE","s":"","st":[],"p":[]},{"n":"es-PR-KarinaNeural","dn":"Karina","g":"F","l":"es-PR","s":"","st":[],"p":[]},{"n":"es-PR-VictorNeural","dn":"Victor","g":"M","l":"es-PR","s":"","st":[],"p":[]},{"n":"es-PY-TaniaNeural","dn":"Tania","g":"F","l":"es-PY","s":"","st":[],"p":[]},{"n":"es-PY-MarioNeural","dn":"Mario","g":"M","l":"es-PY","s":"","st":[],"p":[]},{"n":"es-SV-LorenaNeural","dn":"Lorena","g":"F","l":"es-SV","s":"","st":[],"p":[]},{"n":"es-SV-RodrigoNeural","dn":"Rodrigo","g":"M","l":"es-SV","s":"","st":[],"p":[]},{"n":"es-US-PalomaNeural","dn":"Paloma","g":"F","l":"es-US","s":"","st":[],"p":[]},{"n":"es-US-AlonsoNeural","dn":"Alonso","g":"M","l":"es-US","s":"","st":[],"p":[]},{"n":"es-UY-ValentinaNeural","dn":"Valentina","g":"F","l":"es-UY","s":"","st":[],"p":[]},{"n":"es-UY-MateoNeural","dn":"Mateo","g":"M","l":"es-UY","s":"","st":[],"p":[]},{"n":"es-VE-PaolaNeural","dn":"Paola","g":"F","l":"es-VE","s":"","st":[],"p":[]},{"n":"es-VE-SebastianNeural","dn":"Sebastian","g":"M","l":"es-VE","s":"","st":[],"p":[]},{"n":"et-EE-AnuNeural","dn":"Anu","g":"F","l":"et-EE","s":"","st":[],"p":[]},{"n":"et-EE-KertNeural","dn":"Kert","g":"M","l":"et-EE","s":"","st":[],"p":[]},{"n":"eu-ES-AinhoaNeural","dn":"Ainhoa","g":"F","l":"eu-ES","s":"","st":[],"p":[]},{"n":"eu-ES-AnderNeural","dn":"Ander","g":"M","l":"eu-ES","s":"","st":[],"p":[]},{"n":"fa-IR-DilaraNeural","dn":"Dilara","g":"F","l":"fa-IR","s":"","st":[],"p":[]},{"n":"fa-IR-FaridNeural","dn":"Farid","g":"M","l":"fa-IR","s":"","st":[],"p":[]},{"n":"fi-FI-SelmaNeural","dn":"Selma","g":"F","l":"fi-FI","s":"","st":[],"p":[]},{"n":"fi-FI-HarriNeural","dn":"Harri","g":"M","l":"fi-FI","s":"","st":[],"p":[]},{"n":"fi-FI-NooraNeural","dn":"Noora","g":"F","l":"fi-FI","s":"","st":[],"p":["Bright","Clear"]},{"n":"fi-FI-Grant:MAI-Voice-2.1-Flash","dn":"Grant · MAI Voice 2.1 Flash","g":"M","l":"fi-FI","s":"MAI Voice 2.1 Flash","st":[],"p":[]},{"n":"fi-FI-Harper:MAI-Voice-2.1-Flash","dn":"Harper · MAI Voice 2.1 Flash","g":"F","l":"fi-FI","s":"MAI Voice 2.1 Flash","st":[],"p":[]},{"n":"fi-FI-Grant:MAI-Voice-2.1","dn":"Grant · MAI Voice 2.1","g":"M","l":"fi-FI","s":"MAI Voice 2.1","st":[],"p":[]},{"n":"fi-FI-Harper:MAI-Voice-2.1","dn":"Harper · MAI Voice 2.1","g":"F","l":"fi-FI","s":"MAI Voice 2.1","st":[],"p":[]},{"n":"fil-PH-BlessicaNeural","dn":"Blessica","g":"F","l":"fil-PH","s":"","st":[],"p":[]},{"n":"fil-PH-AngeloNeural","dn":"Angelo","g":"M","l":"fil-PH","s":"","st":[],"p":[]},{"n":"fil-PH-Angelo:DragonHDLatestNeural","dn":"Angelo · Dragon HD","g":"M","l":"fil-PH","s":"Dragon HD","st":[],"p":[]},{"n":"fil-PH-Blessica:DragonHDLatestNeural","dn":"Blessica · Dragon HD","g":"F","l":"fil-PH","s":"Dragon HD","st":[],"p":[]},{"n":"fil-PH-Mariela:DragonHDLatestNeural","dn":"Mariela · Dragon HD","g":"F","l":"fil-PH","s":"Dragon HD","st":[],"p":[]},{"n":"fr-BE-CharlineNeural","dn":"Charline","g":"F","l":"fr-BE","s":"","st":[],"p":[]},{"n":"fr-BE-GerardNeural","dn":"Gerard","g":"M","l":"fr-BE","s":"","st":[],"p":[]},{"n":"fr-CA-Sylvie:DragonHDLatestNeural","dn":"Sylvie · Dragon HD","g":"F","l":"fr-CA","s":"Dragon HD","st":[],"p":[]},{"n":"fr-CA-Thierry:DragonHDLatestNeural","dn":"Thierry · Dragon HD","g":"M","l":"fr-CA","s":"Dragon HD","st":[],"p":[]},{"n":"fr-CA-SylvieNeural","dn":"Sylvie","g":"F","l":"fr-CA","s":"","st":[],"p":[]},{"n":"fr-CA-JeanNeural","dn":"Jean","g":"M","l":"fr-CA","s":"","st":[],"p":[]},{"n":"fr-CA-AntoineNeural","dn":"Antoine","g":"M","l":"fr-CA","s":"","st":[],"p":[]},{"n":"fr-CA-ThierryNeural","dn":"Thierry","g":"M","l":"fr-CA","s":"","st":[],"p":["Engaging","Caring"]},{"n":"fr-CH-ArianeNeural","dn":"Ariane","g":"F","l":"fr-CH","s":"","st":[],"p":[]},{"n":"fr-CH-FabriceNeural","dn":"Fabrice","g":"M","l":"fr-CH","s":"","st":[],"p":[]},{"n":"fr-FR-Vivienne:DragonHDLatestNeural","dn":"Vivienne · Dragon HD","g":"F","l":"fr-FR","s":"Dragon HD","st":[],"p":[]},{"n":"fr-FR-Remy:DragonHDLatestNeural","dn":"Remy · Dragon HD","g":"M","l":"fr-FR","s":"Dragon HD","st":[],"p":[]},{"n":"fr-FR-DeniseNeural","dn":"Denise","g":"F","l":"fr-FR","s":"","st":["cheerful","sad","whispering","excited"],"p":["Bright","Engaging"]},{"n":"fr-FR-HenriNeural","dn":"Henri","g":"M","l":"fr-FR","s":"","st":["cheerful","sad","whispering","excited"],"p":["Strong","Calm"]},{"n":"fr-FR-VivienneMultilingualNeural","dn":"Vivienne · 多语言","g":"F","l":"fr-FR","s":"","st":[],"p":["Warm","Casual"]},{"n":"fr-FR-RemyMultilingualNeural","dn":"Remy · 多语言","g":"M","l":"fr-FR","s":"","st":[],"p":["Bright","Cheerful"]},{"n":"fr-FR-LucienMultilingualNeural","dn":"Lucien · 多语言","g":"M","l":"fr-FR","s":"","st":[],"p":["Warm","Formal","Confident"]},{"n":"fr-FR-AlainNeural","dn":"Alain","g":"M","l":"fr-FR","s":"","st":[],"p":[]},{"n":"fr-FR-BrigitteNeural","dn":"Brigitte","g":"F","l":"fr-FR","s":"","st":[],"p":[]},{"n":"fr-FR-CelesteNeural","dn":"Celeste","g":"F","l":"fr-FR","s":"","st":[],"p":[]},{"n":"fr-FR-ClaudeNeural","dn":"Claude","g":"M","l":"fr-FR","s":"","st":[],"p":[]},{"n":"fr-FR-CoralieNeural","dn":"Coralie","g":"F","l":"fr-FR","s":"","st":[],"p":[]},{"n":"fr-FR-EloiseNeural","dn":"Eloise","g":"F","l":"fr-FR","s":"","st":[],"p":["Curious","Cheerful"]},{"n":"fr-FR-JacquelineNeural","dn":"Jacqueline","g":"F","l":"fr-FR","s":"","st":[],"p":[]},{"n":"fr-FR-JeromeNeural","dn":"Jerome","g":"M","l":"fr-FR","s":"","st":[],"p":[]},{"n":"fr-FR-JosephineNeural","dn":"Josephine","g":"F","l":"fr-FR","s":"","st":[],"p":[]},{"n":"fr-FR-MauriceNeural","dn":"Maurice","g":"M","l":"fr-FR","s":"","st":[],"p":[]},{"n":"fr-FR-YvesNeural","dn":"Yves","g":"M","l":"fr-FR","s":"","st":[],"p":[]},{"n":"fr-FR-YvetteNeural","dn":"Yvette","g":"F","l":"fr-FR","s":"","st":[],"p":["Animated","Bright"]},{"n":"fr-FR-Denise:DragonLatestNeural","dn":"Denise · Dragon","g":"F","l":"fr-FR","s":"Dragon","st":[],"p":[]},{"n":"fr-FR-Grant:MAI-Voice-2.1-Flash","dn":"Grant · MAI Voice 2.1 Flash","g":"M","l":"fr-FR","s":"MAI Voice 2.1 Flash","st":[],"p":[]},{"n":"fr-FR-Harper:MAI-Voice-2.1-Flash","dn":"Harper · MAI Voice 2.1 Flash","g":"F","l":"fr-FR","s":"MAI Voice 2.1 Flash","st":[],"p":[]},{"n":"fr-FR-Marc:MAI-Voice-2-Flash","dn":"Marc · MAI Voice 2 Flash","g":"M","l":"fr-FR","s":"MAI Voice 2 Flash","st":["angry","confused","determined","disgusted","embarrassed","excited","fearful","happy","hopeful","jealous","joyful","regretful","relieved","sad","shouting","softvoice","surprised","whispering"],"p":[]},{"n":"fr-FR-Marc:MAI-Voice-2.1-Flash","dn":"Marc · MAI Voice 2.1 Flash","g":"M","l":"fr-FR","s":"MAI Voice 2.1 Flash","st":["angry","confused","determined","disgusted","embarrassed","excited","fearful","happy","hopeful","jealous","joyful","regretful","relieved","sad","shouting","softvoice","surprised","whispering"],"p":[]},{"n":"fr-FR-Remy:DragonLatestNeural","dn":"Remy · Dragon","g":"M","l":"fr-FR","s":"Dragon","st":[],"p":[]},{"n":"fr-FR-Soleil:MAI-Voice-2-Flash","dn":"Soleil · MAI Voice 2 Flash","g":"F","l":"fr-FR","s":"MAI Voice 2 Flash","st":["angry","confused","determined","disgusted","embarrassed","excited","fearful","happy","hopeful","jealous","joyful","regretful","relieved","sad","shouting","softvoice","surprised","whispering"],"p":[]},{"n":"fr-FR-Soleil:MAI-Voice-2.1-Flash","dn":"Soleil · MAI Voice 2.1 Flash","g":"F","l":"fr-FR","s":"MAI Voice 2.1 Flash","st":["angry","confused","determined","disgusted","embarrassed","excited","fearful","happy","hopeful","jealous","joyful","regretful","relieved","sad","shouting","softvoice","surprised","whispering"],"p":[]},{"n":"fr-FR-Grant:MAI-Voice-2.1","dn":"Grant · MAI Voice 2.1","g":"M","l":"fr-FR","s":"MAI Voice 2.1","st":[],"p":[]},{"n":"fr-FR-Harper:MAI-Voice-2.1","dn":"Harper · MAI Voice 2.1","g":"F","l":"fr-FR","s":"MAI Voice 2.1","st":[],"p":[]},{"n":"fr-FR-Marc:MAI-Voice-2","dn":"Marc · MAI Voice 2","g":"M","l":"fr-FR","s":"MAI Voice 2","st":["angry","confused","determined","disgusted","embarrassed","excited","fearful","happy","hopeful","jealous","joyful","regretful","relieved","sad","shouting","softvoice","surprised","whispering"],"p":[]},{"n":"fr-FR-Marc:MAI-Voice-2.1","dn":"Marc · MAI Voice 2.1","g":"M","l":"fr-FR","s":"MAI Voice 2.1","st":["angry","confused","determined","disgusted","embarrassed","excited","fearful","happy","hopeful","jealous","joyful","regretful","relieved","sad","shouting","softvoice","surprised","whispering"],"p":[]},{"n":"fr-FR-Soleil:MAI-Voice-2","dn":"Soleil · MAI Voice 2","g":"F","l":"fr-FR","s":"MAI Voice 2","st":["angry","confused","determined","disgusted","embarrassed","excited","fearful","happy","hopeful","jealous","joyful","regretful","relieved","sad","shouting","softvoice","surprised","whispering"],"p":[]},{"n":"fr-FR-Soleil:MAI-Voice-2.1","dn":"Soleil · MAI Voice 2.1","g":"F","l":"fr-FR","s":"MAI Voice 2.1","st":["angry","confused","determined","disgusted","embarrassed","excited","fearful","happy","hopeful","jealous","joyful","regretful","relieved","sad","shouting","softvoice","surprised","whispering"],"p":[]},{"n":"ga-IE-OrlaNeural","dn":"Orla","g":"F","l":"ga-IE","s":"","st":[],"p":[]},{"n":"ga-IE-ColmNeural","dn":"Colm","g":"M","l":"ga-IE","s":"","st":[],"p":[]},{"n":"gl-ES-SabelaNeural","dn":"Sabela","g":"F","l":"gl-ES","s":"","st":[],"p":[]},{"n":"gl-ES-RoiNeural","dn":"Roi","g":"M","l":"gl-ES","s":"","st":[],"p":[]},{"n":"gu-IN-DhwaniNeural","dn":"Dhwani","g":"F","l":"gu-IN","s":"","st":[],"p":[]},{"n":"gu-IN-NiranjanNeural","dn":"Niranjan","g":"M","l":"gu-IN","s":"","st":[],"p":[]},{"n":"he-IL-HilaNeural","dn":"Hila","g":"F","l":"he-IL","s":"","st":[],"p":[]},{"n":"he-IL-AvriNeural","dn":"Avri","g":"M","l":"he-IL","s":"","st":[],"p":[]},{"n":"hi-IN-AaravNeural","dn":"Aarav","g":"M","l":"hi-IN","s":"","st":[],"p":[]},{"n":"hi-IN-AnanyaNeural","dn":"Ananya","g":"F","l":"hi-IN","s":"","st":[],"p":[]},{"n":"hi-IN-AartiNeural","dn":"Aarti","g":"F","l":"hi-IN","s":"","st":[],"p":[]},{"n":"hi-IN-ArjunNeural","dn":"Arjun","g":"M","l":"hi-IN","s":"","st":[],"p":[]},{"n":"hi-IN-KavyaNeural","dn":"Kavya","g":"F","l":"hi-IN","s":"","st":[],"p":[]},{"n":"hi-IN-KunalNeural","dn":"Kunal","g":"M","l":"hi-IN","s":"","st":[],"p":[]},{"n":"hi-IN-RehaanNeural","dn":"Rehaan","g":"M","l":"hi-IN","s":"","st":[],"p":[]},{"n":"hi-IN-SwaraNeural","dn":"Swara","g":"F","l":"hi-IN","s":"","st":["newscast","cheerful","empathetic"],"p":[]},{"n":"hi-IN-MadhurNeural","dn":"Madhur","g":"M","l":"hi-IN","s":"","st":[],"p":[]},{"n":"hi-IN-Arjun:MAI-Voice-2-Flash","dn":"Arjun · MAI Voice 2 Flash","g":"M","l":"hi-IN","s":"MAI Voice 2 Flash","st":["angry","confused","disgusted","embarrassed","excited","fearful","happy","hopeful","jealous","joyful","regretful","sad","surprised"],"p":[]},{"n":"hi-IN-Arjun:MAI-Voice-2.1-Flash","dn":"Arjun · MAI Voice 2.1 Flash","g":"M","l":"hi-IN","s":"MAI Voice 2.1 Flash","st":["angry","confused","disgusted","embarrassed","excited","fearful","happy","hopeful","jealous","joyful","regretful","sad","surprised"],"p":[]},{"n":"hi-IN-Dhruv:MAI-Voice-2-Flash","dn":"Dhruv · MAI Voice 2 Flash","g":"M","l":"hi-IN","s":"MAI Voice 2 Flash","st":["angry","confused","determined","disgusted","embarrassed","excited","fearful","happy","hopeful","jealous","joyful","regretful","relieved","sad","shouting","softvoice","surprised","whispering"],"p":[]},{"n":"hi-IN-Dhruv:MAI-Voice-2.1-Flash","dn":"Dhruv · MAI Voice 2.1 Flash","g":"M","l":"hi-IN","s":"MAI Voice 2.1 Flash","st":["angry","confused","determined","disgusted","embarrassed","excited","fearful","happy","hopeful","jealous","joyful","regretful","relieved","sad","shouting","softvoice","surprised","whispering"],"p":[]},{"n":"hi-IN-Diya:DragonLatestNeural","dn":"Diya · Dragon","g":"F","l":"hi-IN","s":"Dragon","st":[],"p":[]},{"n":"hi-IN-Grant:MAI-Voice-2.1-Flash","dn":"Grant · MAI Voice 2.1 Flash","g":"M","l":"hi-IN","s":"MAI Voice 2.1 Flash","st":[],"p":[]},{"n":"hi-IN-Harper:MAI-Voice-2.1-Flash","dn":"Harper · MAI Voice 2.1 Flash","g":"F","l":"hi-IN","s":"MAI Voice 2.1 Flash","st":[],"p":[]},{"n":"hi-IN-Kavya:MAI-Voice-2-Flash","dn":"Kavya · MAI Voice 2 Flash","g":"F","l":"hi-IN","s":"MAI Voice 2 Flash","st":["angry","confused","determined","disgusted","embarrassed","excited","fearful","happy","hopeful","jealous","joyful","regretful","relieved","sad","shouting","softvoice","surprised","whispering"],"p":[]},{"n":"hi-IN-Kavya:MAI-Voice-2.1-Flash","dn":"Kavya · MAI Voice 2.1 Flash","g":"F","l":"hi-IN","s":"MAI Voice 2.1 Flash","st":["angry","confused","determined","disgusted","embarrassed","excited","fearful","happy","hopeful","jealous","joyful","regretful","relieved","sad","shouting","softvoice","surprised","whispering"],"p":[]},{"n":"hi-IN-Priya:MAI-Voice-2-Flash","dn":"Priya · MAI Voice 2 Flash","g":"F","l":"hi-IN","s":"MAI Voice 2 Flash","st":["angry","confused","determined","disgusted","embarrassed","excited","fearful","happy","hopeful","jealous","joyful","regretful","relieved","sad","shouting","softvoice","surprised","whispering"],"p":[]},{"n":"hi-IN-Priya:MAI-Voice-2.1-Flash","dn":"Priya · MAI Voice 2.1 Flash","g":"F","l":"hi-IN","s":"MAI Voice 2.1 Flash","st":["angry","confused","determined","disgusted","embarrassed","excited","fearful","happy","hopeful","jealous","joyful","regretful","relieved","sad","shouting","softvoice","surprised","whispering"],"p":[]},{"n":"hi-IN-Arjun:MAI-Voice-2","dn":"Arjun · MAI Voice 2","g":"M","l":"hi-IN","s":"MAI Voice 2","st":["angry","confused","disgusted","embarrassed","excited","fearful","happy","hopeful","jealous","joyful","regretful","sad","surprised"],"p":[]},{"n":"hi-IN-Arjun:MAI-Voice-2.1","dn":"Arjun · MAI Voice 2.1","g":"M","l":"hi-IN","s":"MAI Voice 2.1","st":["angry","confused","disgusted","embarrassed","excited","fearful","happy","hopeful","jealous","joyful","regretful","sad","surprised"],"p":[]},{"n":"hi-IN-Dhruv:MAI-Voice-2","dn":"Dhruv · MAI Voice 2","g":"M","l":"hi-IN","s":"MAI Voice 2","st":["angry","confused","determined","disgusted","embarrassed","excited","fearful","happy","hopeful","jealous","joyful","regretful","relieved","sad","shouting","softvoice","surprised","whispering"],"p":[]},{"n":"hi-IN-Dhruv:MAI-Voice-2.1","dn":"Dhruv · MAI Voice 2.1","g":"M","l":"hi-IN","s":"MAI Voice 2.1","st":["angry","confused","determined","disgusted","embarrassed","excited","fearful","happy","hopeful","jealous","joyful","regretful","relieved","sad","shouting","softvoice","surprised","whispering"],"p":[]},{"n":"hi-IN-Grant:MAI-Voice-2.1","dn":"Grant · MAI Voice 2.1","g":"M","l":"hi-IN","s":"MAI Voice 2.1","st":[],"p":[]},{"n":"hi-IN-Harper:MAI-Voice-2.1","dn":"Harper · MAI Voice 2.1","g":"F","l":"hi-IN","s":"MAI Voice 2.1","st":[],"p":[]},{"n":"hi-IN-Kavya:MAI-Voice-2","dn":"Kavya · MAI Voice 2","g":"F","l":"hi-IN","s":"MAI Voice 2","st":["angry","confused","determined","disgusted","embarrassed","excited","fearful","happy","hopeful","jealous","joyful","regretful","relieved","sad","shouting","softvoice","surprised","whispering"],"p":[]},{"n":"hi-IN-Kavya:MAI-Voice-2.1","dn":"Kavya · MAI Voice 2.1","g":"F","l":"hi-IN","s":"MAI Voice 2.1","st":["angry","confused","determined","disgusted","embarrassed","excited","fearful","happy","hopeful","jealous","joyful","regretful","relieved","sad","shouting","softvoice","surprised","whispering"],"p":[]},{"n":"hi-IN-Priya:MAI-Voice-2","dn":"Priya · MAI Voice 2","g":"F","l":"hi-IN","s":"MAI Voice 2","st":["angry","confused","determined","disgusted","embarrassed","excited","fearful","happy","hopeful","jealous","joyful","regretful","relieved","sad","shouting","softvoice","surprised","whispering"],"p":[]},{"n":"hi-IN-Priya:MAI-Voice-2.1","dn":"Priya · MAI Voice 2.1","g":"F","l":"hi-IN","s":"MAI Voice 2.1","st":["angry","confused","determined","disgusted","embarrassed","excited","fearful","happy","hopeful","jealous","joyful","regretful","relieved","sad","shouting","softvoice","surprised","whispering"],"p":[]},{"n":"hr-HR-GabrijelaNeural","dn":"Gabrijela","g":"F","l":"hr-HR","s":"","st":[],"p":[]},{"n":"hr-HR-SreckoNeural","dn":"Srecko","g":"M","l":"hr-HR","s":"","st":[],"p":["Whimsical","Friendly"]},{"n":"hu-HU-NoemiNeural","dn":"Noemi","g":"F","l":"hu-HU","s":"","st":[],"p":[]},{"n":"hu-HU-TamasNeural","dn":"Tamas","g":"M","l":"hu-HU","s":"","st":[],"p":["Whimsical","Friendly"]},{"n":"hu-HU-Bence:MAI-Voice-2-Flash","dn":"Bence · MAI Voice 2 Flash","g":"M","l":"hu-HU","s":"MAI Voice 2 Flash","st":[],"p":[]},{"n":"hu-HU-Bence:MAI-Voice-2.1-Flash","dn":"Bence · MAI Voice 2.1 Flash","g":"M","l":"hu-HU","s":"MAI Voice 2.1 Flash","st":[],"p":[]},{"n":"hu-HU-Grant:MAI-Voice-2.1-Flash","dn":"Grant · MAI Voice 2.1 Flash","g":"M","l":"hu-HU","s":"MAI Voice 2.1 Flash","st":[],"p":[]},{"n":"hu-HU-Harper:MAI-Voice-2.1-Flash","dn":"Harper · MAI Voice 2.1 Flash","g":"F","l":"hu-HU","s":"MAI Voice 2.1 Flash","st":[],"p":[]},{"n":"hu-HU-Levente:MAI-Voice-2-Flash","dn":"Levente · MAI Voice 2 Flash","g":"M","l":"hu-HU","s":"MAI Voice 2 Flash","st":[],"p":[]},{"n":"hu-HU-Levente:MAI-Voice-2.1-Flash","dn":"Levente · MAI Voice 2.1 Flash","g":"M","l":"hu-HU","s":"MAI Voice 2.1 Flash","st":[],"p":[]},{"n":"hu-HU-Lilla:MAI-Voice-2-Flash","dn":"Lilla · MAI Voice 2 Flash","g":"F","l":"hu-HU","s":"MAI Voice 2 Flash","st":[],"p":[]},{"n":"hu-HU-Lilla:MAI-Voice-2.1-Flash","dn":"Lilla · MAI Voice 2.1 Flash","g":"F","l":"hu-HU","s":"MAI Voice 2.1 Flash","st":[],"p":[]},{"n":"hu-HU-Réka:MAI-Voice-2-Flash","dn":"Réka · MAI Voice 2 Flash","g":"F","l":"hu-HU","s":"MAI Voice 2 Flash","st":[],"p":[]},{"n":"hu-HU-Réka:MAI-Voice-2.1-Flash","dn":"Réka · MAI Voice 2.1 Flash","g":"F","l":"hu-HU","s":"MAI Voice 2.1 Flash","st":[],"p":[]},{"n":"hu-HU-Bence:MAI-Voice-2","dn":"Bence · MAI Voice 2","g":"M","l":"hu-HU","s":"MAI Voice 2","st":[],"p":[]},{"n":"hu-HU-Bence:MAI-Voice-2.1","dn":"Bence · MAI Voice 2.1","g":"M","l":"hu-HU","s":"MAI Voice 2.1","st":[],"p":[]},{"n":"hu-HU-Grant:MAI-Voice-2.1","dn":"Grant · MAI Voice 2.1","g":"M","l":"hu-HU","s":"MAI Voice 2.1","st":[],"p":[]},{"n":"hu-HU-Harper:MAI-Voice-2.1","dn":"Harper · MAI Voice 2.1","g":"F","l":"hu-HU","s":"MAI Voice 2.1","st":[],"p":[]},{"n":"hu-HU-Levente:MAI-Voice-2","dn":"Levente · MAI Voice 2","g":"M","l":"hu-HU","s":"MAI Voice 2","st":[],"p":[]},{"n":"hu-HU-Levente:MAI-Voice-2.1","dn":"Levente · MAI Voice 2.1","g":"M","l":"hu-HU","s":"MAI Voice 2.1","st":[],"p":[]},{"n":"hu-HU-Lilla:MAI-Voice-2","dn":"Lilla · MAI Voice 2","g":"F","l":"hu-HU","s":"MAI Voice 2","st":[],"p":[]},{"n":"hu-HU-Lilla:MAI-Voice-2.1","dn":"Lilla · MAI Voice 2.1","g":"F","l":"hu-HU","s":"MAI Voice 2.1","st":[],"p":[]},{"n":"hu-HU-Réka:MAI-Voice-2","dn":"Réka · MAI Voice 2","g":"F","l":"hu-HU","s":"MAI Voice 2","st":[],"p":[]},{"n":"hu-HU-Réka:MAI-Voice-2.1","dn":"Réka · MAI Voice 2.1","g":"F","l":"hu-HU","s":"MAI Voice 2.1","st":[],"p":[]},{"n":"hy-AM-AnahitNeural","dn":"Anahit","g":"F","l":"hy-AM","s":"","st":[],"p":[]},{"n":"hy-AM-HaykNeural","dn":"Hayk","g":"M","l":"hy-AM","s":"","st":[],"p":[]},{"n":"id-ID-GadisNeural","dn":"Gadis","g":"F","l":"id-ID","s":"","st":[],"p":[]},{"n":"id-ID-ArdiNeural","dn":"Ardi","g":"M","l":"id-ID","s":"","st":[],"p":[]},{"n":"id-ID-Grant:MAI-Voice-2.1-Flash","dn":"Grant · MAI Voice 2.1 Flash","g":"M","l":"id-ID","s":"MAI Voice 2.1 Flash","st":[],"p":[]},{"n":"id-ID-Harper:MAI-Voice-2.1-Flash","dn":"Harper · MAI Voice 2.1 Flash","g":"F","l":"id-ID","s":"MAI Voice 2.1 Flash","st":[],"p":[]},{"n":"id-ID-Ardi:DragonHDLatestNeural","dn":"Ardi · Dragon HD","g":"M","l":"id-ID","s":"Dragon HD","st":[],"p":[]},{"n":"id-ID-Gadis:DragonHDLatestNeural","dn":"Gadis · Dragon HD","g":"F","l":"id-ID","s":"Dragon HD","st":[],"p":[]},{"n":"id-ID-Grant:MAI-Voice-2.1","dn":"Grant · MAI Voice 2.1","g":"M","l":"id-ID","s":"MAI Voice 2.1","st":[],"p":[]},{"n":"id-ID-Harper:MAI-Voice-2.1","dn":"Harper · MAI Voice 2.1","g":"F","l":"id-ID","s":"MAI Voice 2.1","st":[],"p":[]},{"n":"id-ID-Larasati:DragonHDLatestNeural","dn":"Larasati · Dragon HD","g":"F","l":"id-ID","s":"Dragon HD","st":[],"p":[]},{"n":"is-IS-GudrunNeural","dn":"Gudrun","g":"F","l":"is-IS","s":"","st":[],"p":[]},{"n":"is-IS-GunnarNeural","dn":"Gunnar","g":"M","l":"is-IS","s":"","st":[],"p":[]},{"n":"it-IT-Isabella:DragonHDLatestNeural","dn":"Isabella · Dragon HD","g":"F","l":"it-IT","s":"Dragon HD","st":[],"p":[]},{"n":"it-IT-Alessio:DragonHDLatestNeural","dn":"Alessio · Dragon HD","g":"M","l":"it-IT","s":"Dragon HD","st":[],"p":[]},{"n":"it-IT-ElsaNeural","dn":"Elsa","g":"F","l":"it-IT","s":"","st":[],"p":["Confident","Crisp"]},{"n":"it-IT-IsabellaNeural","dn":"Isabella","g":"F","l":"it-IT","s":"","st":["cheerful","chat","whispering","sad","excited"],"p":["Upbeat","Bright"]},{"n":"it-IT-DiegoNeural","dn":"Diego","g":"M","l":"it-IT","s":"","st":["cheerful","sad","excited"],"p":["Animated","Upbeat"]},{"n":"it-IT-AlessioMultilingualNeural","dn":"Alessio · 多语言","g":"M","l":"it-IT","s":"","st":[],"p":["Cheerful","Warm","Gentle","Cheerful","Friendly"]},{"n":"it-IT-IsabellaMultilingualNeural","dn":"Isabella · 多语言","g":"F","l":"it-IT","s":"","st":[],"p":["Warm","Cheerful","Casual","Friendly","Pleasant"]},{"n":"it-IT-GiuseppeMultilingualNeural","dn":"Giuseppe · 多语言","g":"M","l":"it-IT","s":"","st":[],"p":["Expressive","Upbeat","Youthful"]},{"n":"it-IT-MarcelloMultilingualNeural","dn":"Marcello · 多语言","g":"M","l":"it-IT","s":"","st":[],"p":["Cheerful","Friendly","Casual","Warm","Pleasant"]},{"n":"it-IT-BenignoNeural","dn":"Benigno","g":"M","l":"it-IT","s":"","st":[],"p":[]},{"n":"it-IT-CalimeroNeural","dn":"Calimero","g":"M","l":"it-IT","s":"","st":[],"p":[]},{"n":"it-IT-CataldoNeural","dn":"Cataldo","g":"M","l":"it-IT","s":"","st":[],"p":[]},{"n":"it-IT-FabiolaNeural","dn":"Fabiola","g":"F","l":"it-IT","s":"","st":[],"p":[]},{"n":"it-IT-FiammaNeural","dn":"Fiamma","g":"F","l":"it-IT","s":"","st":[],"p":[]},{"n":"it-IT-GianniNeural","dn":"Gianni","g":"M","l":"it-IT","s":"","st":[],"p":[]},{"n":"it-IT-GiuseppeNeural","dn":"Giuseppe","g":"M","l":"it-IT","s":"","st":[],"p":["Bright","Warm"]},{"n":"it-IT-ImeldaNeural","dn":"Imelda","g":"F","l":"it-IT","s":"","st":[],"p":[]},{"n":"it-IT-IrmaNeural","dn":"Irma","g":"F","l":"it-IT","s":"","st":[],"p":[]},{"n":"it-IT-LisandroNeural","dn":"Lisandro","g":"M","l":"it-IT","s":"","st":[],"p":[]},{"n":"it-IT-PalmiraNeural","dn":"Palmira","g":"F","l":"it-IT","s":"","st":[],"p":["Animated","Bright"]},{"n":"it-IT-PierinaNeural","dn":"Pierina","g":"F","l":"it-IT","s":"","st":[],"p":["Curious","Cheerful"]},{"n":"it-IT-RinaldoNeural","dn":"Rinaldo","g":"M","l":"it-IT","s":"","st":[],"p":[]},{"n":"it-IT-Alessio:DragonLatestNeural","dn":"Alessio · Dragon","g":"M","l":"it-IT","s":"Dragon","st":[],"p":[]},{"n":"it-IT-Grant:MAI-Voice-2.1-Flash","dn":"Grant · MAI Voice 2.1 Flash","g":"M","l":"it-IT","s":"MAI Voice 2.1 Flash","st":[],"p":[]},{"n":"it-IT-Harper:MAI-Voice-2.1-Flash","dn":"Harper · MAI Voice 2.1 Flash","g":"F","l":"it-IT","s":"MAI Voice 2.1 Flash","st":[],"p":[]},{"n":"it-IT-Isabella:DragonLatestNeural","dn":"Isabella · Dragon","g":"F","l":"it-IT","s":"Dragon","st":[],"p":[]},{"n":"it-IT-Luca:MAI-Voice-2-Flash","dn":"Luca · MAI Voice 2 Flash","g":"M","l":"it-IT","s":"MAI Voice 2 Flash","st":["angry","confused","determined","disgusted","embarrassed","excited","fearful","happy","hopeful","jealous","joyful","regretful","relieved","sad","shouting","softvoice","surprised","whispering"],"p":[]},{"n":"it-IT-Luca:MAI-Voice-2.1-Flash","dn":"Luca · MAI Voice 2.1 Flash","g":"M","l":"it-IT","s":"MAI Voice 2.1 Flash","st":["angry","confused","determined","disgusted","embarrassed","excited","fearful","happy","hopeful","jealous","joyful","regretful","relieved","sad","shouting","softvoice","surprised","whispering"],"p":[]},{"n":"it-IT-Rosa:MAI-Voice-2-Flash","dn":"Rosa · MAI Voice 2 Flash","g":"F","l":"it-IT","s":"MAI Voice 2 Flash","st":["angry","confused","determined","disgusted","embarrassed","excited","fearful","happy","hopeful","jealous","joyful","regretful","relieved","sad","shouting","softvoice","surprised","whispering"],"p":[]},{"n":"it-IT-Rosa:MAI-Voice-2.1-Flash","dn":"Rosa · MAI Voice 2.1 Flash","g":"F","l":"it-IT","s":"MAI Voice 2.1 Flash","st":["angry","confused","determined","disgusted","embarrassed","excited","fearful","happy","hopeful","jealous","joyful","regretful","relieved","sad","shouting","softvoice","surprised","whispering"],"p":[]},{"n":"it-IT-Giuseppe:DragonHDLatestNeural","dn":"Giuseppe · Dragon HD","g":"M","l":"it-IT","s":"Dragon HD","st":[],"p":[]},{"n":"it-IT-Grant:MAI-Voice-2.1","dn":"Grant · MAI Voice 2.1","g":"M","l":"it-IT","s":"MAI Voice 2.1","st":[],"p":[]},{"n":"it-IT-Harper:MAI-Voice-2.1","dn":"Harper · MAI Voice 2.1","g":"F","l":"it-IT","s":"MAI Voice 2.1","st":[],"p":[]},{"n":"it-IT-Luca:MAI-Voice-2","dn":"Luca · MAI Voice 2","g":"M","l":"it-IT","s":"MAI Voice 2","st":["angry","confused","determined","disgusted","embarrassed","excited","fearful","happy","hopeful","jealous","joyful","regretful","relieved","sad","shouting","softvoice","surprised","whispering"],"p":[]},{"n":"it-IT-Luca:MAI-Voice-2.1","dn":"Luca · MAI Voice 2.1","g":"M","l":"it-IT","s":"MAI Voice 2.1","st":["angry","confused","determined","disgusted","embarrassed","excited","fearful","happy","hopeful","jealous","joyful","regretful","relieved","sad","shouting","softvoice","surprised","whispering"],"p":[]},{"n":"it-IT-Rosa:MAI-Voice-2","dn":"Rosa · MAI Voice 2","g":"F","l":"it-IT","s":"MAI Voice 2","st":["angry","confused","determined","disgusted","embarrassed","excited","fearful","happy","hopeful","jealous","joyful","regretful","relieved","sad","shouting","softvoice","surprised","whispering"],"p":[]},{"n":"it-IT-Rosa:MAI-Voice-2.1","dn":"Rosa · MAI Voice 2.1","g":"F","l":"it-IT","s":"MAI Voice 2.1","st":["angry","confused","determined","disgusted","embarrassed","excited","fearful","happy","hopeful","jealous","joyful","regretful","relieved","sad","shouting","softvoice","surprised","whispering"],"p":[]},{"n":"iu-Cans-CA-SiqiniqNeural","dn":"Siqiniq","g":"F","l":"iu-Cans-CA","s":"","st":[],"p":[]},{"n":"iu-Cans-CA-TaqqiqNeural","dn":"Taqqiq","g":"M","l":"iu-Cans-CA","s":"","st":[],"p":[]},{"n":"iu-Latn-CA-SiqiniqNeural","dn":"Siqiniq","g":"F","l":"iu-Latn-CA","s":"","st":[],"p":[]},{"n":"iu-Latn-CA-TaqqiqNeural","dn":"Taqqiq","g":"M","l":"iu-Latn-CA","s":"","st":[],"p":[]},{"n":"ja-JP-Nanami:DragonHDLatestNeural","dn":"Nanami · Dragon HD","g":"F","l":"ja-JP","s":"Dragon HD","st":[],"p":[]},{"n":"ja-JP-Masaru:DragonHDLatestNeural","dn":"Masaru · Dragon HD","g":"M","l":"ja-JP","s":"Dragon HD","st":[],"p":["Bright","Warm"]},{"n":"ja-JP-NanamiNeural","dn":"Nanami","g":"F","l":"ja-JP","s":"","st":["chat","customerservice","cheerful"],"p":["Bright","Cheerful"]},{"n":"ja-JP-KeitaNeural","dn":"Keita","g":"M","l":"ja-JP","s":"","st":[],"p":["Casual","Engaging"]},{"n":"ja-JP-AoiNeural","dn":"Aoi","g":"F","l":"ja-JP","s":"","st":[],"p":["Curious","Cheerful"]},{"n":"ja-JP-DaichiNeural","dn":"Daichi","g":"M","l":"ja-JP","s":"","st":[],"p":[]},{"n":"ja-JP-MayuNeural","dn":"Mayu","g":"F","l":"ja-JP","s":"","st":[],"p":["Animated","Bright"]},{"n":"ja-JP-NaokiNeural","dn":"Naoki","g":"M","l":"ja-JP","s":"","st":[],"p":[]},{"n":"ja-JP-ShioriNeural","dn":"Shiori","g":"F","l":"ja-JP","s":"","st":[],"p":[]},{"n":"ja-JP-MasaruMultilingualNeural","dn":"Masaru · 多语言","g":"M","l":"ja-JP","s":"","st":[],"p":["Bright","Warm"]},{"n":"jv-ID-SitiNeural","dn":"Siti","g":"F","l":"jv-ID","s":"","st":[],"p":[]},{"n":"jv-ID-DimasNeural","dn":"Dimas","g":"M","l":"jv-ID","s":"","st":[],"p":[]},{"n":"ka-GE-EkaNeural","dn":"Eka","g":"F","l":"ka-GE","s":"","st":[],"p":[]},{"n":"ka-GE-GiorgiNeural","dn":"Giorgi","g":"M","l":"ka-GE","s":"","st":[],"p":[]},{"n":"kk-KZ-AigulNeural","dn":"Aigul","g":"F","l":"kk-KZ","s":"","st":[],"p":[]},{"n":"kk-KZ-DauletNeural","dn":"Daulet","g":"M","l":"kk-KZ","s":"","st":[],"p":[]},{"n":"km-KH-SreymomNeural","dn":"Sreymom","g":"F","l":"km-KH","s":"","st":[],"p":[]},{"n":"km-KH-PisethNeural","dn":"Piseth","g":"M","l":"km-KH","s":"","st":[],"p":[]},{"n":"kn-IN-SapnaNeural","dn":"Sapna","g":"F","l":"kn-IN","s":"","st":[],"p":[]},{"n":"kn-IN-GaganNeural","dn":"Gagan","g":"M","l":"kn-IN","s":"","st":[],"p":[]},{"n":"ko-KR-SunHi:DragonHDLatestNeural","dn":"SunHi · Dragon HD","g":"F","l":"ko-KR","s":"Dragon HD","st":[],"p":[]},{"n":"ko-KR-Hyunsu:DragonHDLatestNeural","dn":"Hyunsu · Dragon HD","g":"M","l":"ko-KR","s":"Dragon HD","st":[],"p":[]},{"n":"ko-KR-SunHiNeural","dn":"SunHi","g":"F","l":"ko-KR","s":"","st":[],"p":["Confident","Formal"]},{"n":"ko-KR-InJoonNeural","dn":"InJoon","g":"M","l":"ko-KR","s":"","st":["sad"],"p":["Casual","Friendly"]},{"n":"ko-KR-HyunsuMultilingualNeural","dn":"Hyunsu · 多语言","g":"M","l":"ko-KR","s":"","st":[],"p":["Formal","Clear","Confident"]},{"n":"ko-KR-BongJinNeural","dn":"BongJin","g":"M","l":"ko-KR","s":"","st":[],"p":[]},{"n":"ko-KR-GookMinNeural","dn":"GookMin","g":"M","l":"ko-KR","s":"","st":[],"p":[]},{"n":"ko-KR-HyunsuNeural","dn":"Hyunsu","g":"M","l":"ko-KR","s":"","st":[],"p":["Bright","Casual"]},{"n":"ko-KR-JiMinNeural","dn":"JiMin","g":"F","l":"ko-KR","s":"","st":[],"p":[]},{"n":"ko-KR-SeoHyeonNeural","dn":"SeoHyeon","g":"F","l":"ko-KR","s":"","st":[],"p":["Curious","Cheerful"]},{"n":"ko-KR-SoonBokNeural","dn":"SoonBok","g":"F","l":"ko-KR","s":"","st":[],"p":["Animated","Bright"]},{"n":"ko-KR-YuJinNeural","dn":"YuJin","g":"F","l":"ko-KR","s":"","st":[],"p":[]},{"n":"ko-KR-Grant:MAI-Voice-2.1-Flash","dn":"Grant · MAI Voice 2.1 Flash","g":"M","l":"ko-KR","s":"MAI Voice 2.1 Flash","st":[],"p":[]},{"n":"ko-KR-Haena:MAI-Voice-2-Flash","dn":"Haena · MAI Voice 2 Flash","g":"F","l":"ko-KR","s":"MAI Voice 2 Flash","st":["angry","confused","determined","embarrassed","excited","happy","hopeful","joyful","regretful","relieved","sad","softvoice","surprised"],"p":[]},{"n":"ko-KR-Hana:MAI-Voice-2.1-Flash","dn":"Hana · MAI Voice 2.1 Flash","g":"F","l":"ko-KR","s":"MAI Voice 2.1 Flash","st":["angry","confused","determined","embarrassed","excited","happy","hopeful","joyful","regretful","relieved","sad","softvoice","surprised"],"p":[]},{"n":"ko-KR-Harper:MAI-Voice-2.1-Flash","dn":"Harper · MAI Voice 2.1 Flash","g":"F","l":"ko-KR","s":"MAI Voice 2.1 Flash","st":[],"p":[]},{"n":"ko-KR-Junho:MAI-Voice-2-Flash","dn":"Junho · MAI Voice 2 Flash","g":"M","l":"ko-KR","s":"MAI Voice 2 Flash","st":["angry","confused","determined","embarrassed","excited","happy","hopeful","joyful","relieved","sad","softvoice"],"p":[]},{"n":"ko-KR-Junho:MAI-Voice-2.1-Flash","dn":"Junho · MAI Voice 2.1 Flash","g":"M","l":"ko-KR","s":"MAI Voice 2.1 Flash","st":["angry","confused","determined","embarrassed","excited","happy","hopeful","joyful","relieved","sad","softvoice"],"p":[]},{"n":"ko-KR-Grant:MAI-Voice-2.1","dn":"Grant · MAI Voice 2.1","g":"M","l":"ko-KR","s":"MAI Voice 2.1","st":[],"p":[]},{"n":"ko-KR-Haena:MAI-Voice-2","dn":"Haena · MAI Voice 2","g":"F","l":"ko-KR","s":"MAI Voice 2","st":["angry","confused","determined","embarrassed","excited","happy","hopeful","joyful","regretful","relieved","sad","softvoice","surprised"],"p":[]},{"n":"ko-KR-Hana:MAI-Voice-2.1","dn":"Hana · MAI Voice 2.1","g":"F","l":"ko-KR","s":"MAI Voice 2.1","st":["angry","confused","determined","embarrassed","excited","happy","hopeful","joyful","regretful","relieved","sad","softvoice","surprised"],"p":[]},{"n":"ko-KR-Harper:MAI-Voice-2.1","dn":"Harper · MAI Voice 2.1","g":"F","l":"ko-KR","s":"MAI Voice 2.1","st":[],"p":[]},{"n":"ko-KR-Junho:MAI-Voice-2","dn":"Junho · MAI Voice 2","g":"M","l":"ko-KR","s":"MAI Voice 2","st":["angry","confused","determined","embarrassed","excited","happy","hopeful","joyful","relieved","sad","softvoice"],"p":[]},{"n":"ko-KR-Junho:MAI-Voice-2.1","dn":"Junho · MAI Voice 2.1","g":"M","l":"ko-KR","s":"MAI Voice 2.1","st":["angry","confused","determined","embarrassed","excited","happy","hopeful","joyful","relieved","sad","softvoice"],"p":[]},{"n":"lo-LA-KeomanyNeural","dn":"Keomany","g":"F","l":"lo-LA","s":"","st":[],"p":[]},{"n":"lo-LA-ChanthavongNeural","dn":"Chanthavong","g":"M","l":"lo-LA","s":"","st":[],"p":[]},{"n":"lt-LT-OnaNeural","dn":"Ona","g":"F","l":"lt-LT","s":"","st":[],"p":[]},{"n":"lt-LT-LeonasNeural","dn":"Leonas","g":"M","l":"lt-LT","s":"","st":[],"p":[]},{"n":"lv-LV-EveritaNeural","dn":"Everita","g":"F","l":"lv-LV","s":"","st":[],"p":[]},{"n":"lv-LV-NilsNeural","dn":"Nils","g":"M","l":"lv-LV","s":"","st":[],"p":[]},{"n":"mk-MK-MarijaNeural","dn":"Marija","g":"F","l":"mk-MK","s":"","st":[],"p":[]},{"n":"mk-MK-AleksandarNeural","dn":"Aleksandar","g":"M","l":"mk-MK","s":"","st":[],"p":[]},{"n":"ml-IN-SobhanaNeural","dn":"Sobhana","g":"F","l":"ml-IN","s":"","st":[],"p":[]},{"n":"ml-IN-MidhunNeural","dn":"Midhun","g":"M","l":"ml-IN","s":"","st":[],"p":[]},{"n":"mn-MN-YesuiNeural","dn":"Yesui","g":"F","l":"mn-MN","s":"","st":[],"p":[]},{"n":"mn-MN-BataaNeural","dn":"Bataa","g":"M","l":"mn-MN","s":"","st":[],"p":[]},{"n":"mr-IN-AarohiNeural","dn":"Aarohi","g":"F","l":"mr-IN","s":"","st":[],"p":[]},{"n":"mr-IN-ManoharNeural","dn":"Manohar","g":"M","l":"mr-IN","s":"","st":[],"p":[]},{"n":"ms-MY-YasminNeural","dn":"Yasmin","g":"F","l":"ms-MY","s":"","st":[],"p":[]},{"n":"ms-MY-OsmanNeural","dn":"Osman","g":"M","l":"ms-MY","s":"","st":[],"p":["Whimsical","Friendly"]},{"n":"ms-MY-Osman:DragonHDLatestNeural","dn":"Osman · Dragon HD","g":"M","l":"ms-MY","s":"Dragon HD","st":[],"p":[]},{"n":"ms-MY-Yasmin:DragonHDLatestNeural","dn":"Yasmin · Dragon HD","g":"F","l":"ms-MY","s":"Dragon HD","st":[],"p":[]},{"n":"ms-MY-Nadira:DragonHDLatestNeural","dn":"Nadira · Dragon HD","g":"F","l":"ms-MY","s":"Dragon HD","st":[],"p":[]},{"n":"mt-MT-GraceNeural","dn":"Grace","g":"F","l":"mt-MT","s":"","st":[],"p":[]},{"n":"mt-MT-JosephNeural","dn":"Joseph","g":"M","l":"mt-MT","s":"","st":[],"p":[]},{"n":"my-MM-NilarNeural","dn":"Nilar","g":"F","l":"my-MM","s":"","st":[],"p":[]},{"n":"my-MM-ThihaNeural","dn":"Thiha","g":"M","l":"my-MM","s":"","st":[],"p":[]},{"n":"nb-NO-PernilleNeural","dn":"Pernille","g":"F","l":"nb-NO","s":"","st":[],"p":[]},{"n":"nb-NO-FinnNeural","dn":"Finn","g":"M","l":"nb-NO","s":"","st":[],"p":[]},{"n":"nb-NO-IselinNeural","dn":"Iselin","g":"F","l":"nb-NO","s":"","st":[],"p":["Bright","Clear"]},{"n":"nb-NO-Grant:MAI-Voice-2.1-Flash","dn":"Grant · MAI Voice 2.1 Flash","g":"M","l":"nb-NO","s":"MAI Voice 2.1 Flash","st":[],"p":[]},{"n":"nb-NO-Harper:MAI-Voice-2.1-Flash","dn":"Harper · MAI Voice 2.1 Flash","g":"F","l":"nb-NO","s":"MAI Voice 2.1 Flash","st":[],"p":[]},{"n":"nb-NO-Grant:MAI-Voice-2.1","dn":"Grant · MAI Voice 2.1","g":"M","l":"nb-NO","s":"MAI Voice 2.1","st":[],"p":[]},{"n":"nb-NO-Harper:MAI-Voice-2.1","dn":"Harper · MAI Voice 2.1","g":"F","l":"nb-NO","s":"MAI Voice 2.1","st":[],"p":[]},{"n":"ne-NP-HemkalaNeural","dn":"Hemkala","g":"F","l":"ne-NP","s":"","st":[],"p":[]},{"n":"ne-NP-SagarNeural","dn":"Sagar","g":"M","l":"ne-NP","s":"","st":[],"p":[]},{"n":"nl-BE-DenaNeural","dn":"Dena","g":"F","l":"nl-BE","s":"","st":[],"p":[]},{"n":"nl-BE-ArnaudNeural","dn":"Arnaud","g":"M","l":"nl-BE","s":"","st":[],"p":[]},{"n":"nl-NL-FennaNeural","dn":"Fenna","g":"F","l":"nl-NL","s":"","st":[],"p":["Bright","Confident"]},{"n":"nl-NL-MaartenNeural","dn":"Maarten","g":"M","l":"nl-NL","s":"","st":[],"p":["Formal","Upbeat"]},{"n":"nl-NL-ColetteNeural","dn":"Colette","g":"F","l":"nl-NL","s":"","st":[],"p":["Bright","Clear"]},{"n":"nl-NL-Fleur:MAI-Voice-2-Flash","dn":"Fleur · MAI Voice 2 Flash","g":"F","l":"nl-NL","s":"MAI Voice 2 Flash","st":[],"p":[]},{"n":"nl-NL-Grant:MAI-Voice-2.1-Flash","dn":"Grant · MAI Voice 2.1 Flash","g":"M","l":"nl-NL","s":"MAI Voice 2.1 Flash","st":[],"p":[]},{"n":"nl-NL-Harper:MAI-Voice-2.1-Flash","dn":"Harper · MAI Voice 2.1 Flash","g":"F","l":"nl-NL","s":"MAI Voice 2.1 Flash","st":[],"p":[]},{"n":"nl-NL-Sander:MAI-Voice-2-Flash","dn":"Sander · MAI Voice 2 Flash","g":"M","l":"nl-NL","s":"MAI Voice 2 Flash","st":["adventurous","caringempathy","curious","encouraging","excited","friendlycheerful","nostalgic","reflective","saddisappointed","serious"],"p":[]},{"n":"nl-NL-Sander:MAI-Voice-2.1-Flash","dn":"Sander · MAI Voice 2.1 Flash","g":"M","l":"nl-NL","s":"MAI Voice 2.1 Flash","st":["adventurous","caringempathy","curious","encouraging","excited","friendlycheerful","nostalgic","reflective","saddisappointed","serious"],"p":[]},{"n":"nl-NL-Fleur:MAI-Voice-2","dn":"Fleur · MAI Voice 2","g":"F","l":"nl-NL","s":"MAI Voice 2","st":[],"p":[]},{"n":"nl-NL-Grant:MAI-Voice-2.1","dn":"Grant · MAI Voice 2.1","g":"M","l":"nl-NL","s":"MAI Voice 2.1","st":[],"p":[]},{"n":"nl-NL-Harper:MAI-Voice-2.1","dn":"Harper · MAI Voice 2.1","g":"F","l":"nl-NL","s":"MAI Voice 2.1","st":[],"p":[]},{"n":"nl-NL-Sander:MAI-Voice-2","dn":"Sander · MAI Voice 2","g":"M","l":"nl-NL","s":"MAI Voice 2","st":["adventurous","caringempathy","curious","encouraging","excited","friendlycheerful","nostalgic","reflective","saddisappointed","serious"],"p":[]},{"n":"nl-NL-Sander:MAI-Voice-2.1","dn":"Sander · MAI Voice 2.1","g":"M","l":"nl-NL","s":"MAI Voice 2.1","st":["adventurous","caringempathy","curious","encouraging","excited","friendlycheerful","nostalgic","reflective","saddisappointed","serious"],"p":[]},{"n":"or-IN-SubhasiniNeural","dn":"Subhasini","g":"F","l":"or-IN","s":"","st":[],"p":[]},{"n":"or-IN-SukantNeural","dn":"Sukant","g":"M","l":"or-IN","s":"","st":[],"p":[]},{"n":"pa-IN-OjasNeural","dn":"Ojas","g":"M","l":"pa-IN","s":"","st":[],"p":[]},{"n":"pa-IN-VaaniNeural","dn":"Vaani","g":"F","l":"pa-IN","s":"","st":[],"p":[]},{"n":"pl-PL-AgnieszkaNeural","dn":"Agnieszka","g":"F","l":"pl-PL","s":"","st":[],"p":[]},{"n":"pl-PL-MarekNeural","dn":"Marek","g":"M","l":"pl-PL","s":"","st":[],"p":[]},{"n":"pl-PL-ZofiaNeural","dn":"Zofia","g":"F","l":"pl-PL","s":"","st":[],"p":["Bright","Clear"]},{"n":"pl-PL-Grant:MAI-Voice-2.1-Flash","dn":"Grant · MAI Voice 2.1 Flash","g":"M","l":"pl-PL","s":"MAI Voice 2.1 Flash","st":[],"p":[]},{"n":"pl-PL-Harper:MAI-Voice-2.1-Flash","dn":"Harper · MAI Voice 2.1 Flash","g":"F","l":"pl-PL","s":"MAI Voice 2.1 Flash","st":[],"p":[]},{"n":"pl-PL-Grant:MAI-Voice-2.1","dn":"Grant · MAI Voice 2.1","g":"M","l":"pl-PL","s":"MAI Voice 2.1","st":[],"p":[]},{"n":"pl-PL-Harper:MAI-Voice-2.1","dn":"Harper · MAI Voice 2.1","g":"F","l":"pl-PL","s":"MAI Voice 2.1","st":[],"p":[]},{"n":"ps-AF-LatifaNeural","dn":"Latifa","g":"F","l":"ps-AF","s":"","st":[],"p":[]},{"n":"ps-AF-GulNawazNeural","dn":"GulNawaz","g":"M","l":"ps-AF","s":"","st":[],"p":[]},{"n":"pt-BR-Thalita:DragonHDLatestNeural","dn":"Thalita · Dragon HD","g":"F","l":"pt-BR","s":"Dragon HD","st":[],"p":[]},{"n":"pt-BR-Macerio:DragonHDLatestNeural","dn":"Macerio · Dragon HD","g":"M","l":"pt-BR","s":"Dragon HD","st":[],"p":[]},{"n":"pt-BR-FranciscaNeural","dn":"Francisca","g":"F","l":"pt-BR","s":"","st":["calm"],"p":["Cheerful","Crisp"]},{"n":"pt-BR-AntonioNeural","dn":"Antonio","g":"M","l":"pt-BR","s":"","st":[],"p":["Bright","Upbeat"]},{"n":"pt-BR-MacerioMultilingualNeural","dn":"Macerio · 多语言","g":"M","l":"pt-BR","s":"","st":[],"p":["Clear","Confident","Upbeat"]},{"n":"pt-BR-ThalitaMultilingualNeural","dn":"Thalita · 多语言","g":"F","l":"pt-BR","s":"","st":[],"p":["Confident","Formal","Warm","Cheerful","Casual"]},{"n":"pt-BR-BrendaNeural","dn":"Brenda","g":"F","l":"pt-BR","s":"","st":[],"p":[]},{"n":"pt-BR-DonatoNeural","dn":"Donato","g":"M","l":"pt-BR","s":"","st":[],"p":[]},{"n":"pt-BR-ElzaNeural","dn":"Elza","g":"F","l":"pt-BR","s":"","st":[],"p":[]},{"n":"pt-BR-FabioNeural","dn":"Fabio","g":"M","l":"pt-BR","s":"","st":[],"p":[]},{"n":"pt-BR-GiovannaNeural","dn":"Giovanna","g":"F","l":"pt-BR","s":"","st":[],"p":[]},{"n":"pt-BR-HumbertoNeural","dn":"Humberto","g":"M","l":"pt-BR","s":"","st":[],"p":[]},{"n":"pt-BR-JulioNeural","dn":"Julio","g":"M","l":"pt-BR","s":"","st":[],"p":[]},{"n":"pt-BR-LeilaNeural","dn":"Leila","g":"F","l":"pt-BR","s":"","st":[],"p":[]},{"n":"pt-BR-LeticiaNeural","dn":"Leticia","g":"F","l":"pt-BR","s":"","st":[],"p":["Curious","Cheerful"]},{"n":"pt-BR-ManuelaNeural","dn":"Manuela","g":"F","l":"pt-BR","s":"","st":[],"p":[]},{"n":"pt-BR-NicolauNeural","dn":"Nicolau","g":"M","l":"pt-BR","s":"","st":[],"p":[]},{"n":"pt-BR-ThalitaNeural","dn":"Thalita","g":"F","l":"pt-BR","s":"","st":[],"p":["Confident","Formal"]},{"n":"pt-BR-ValerioNeural","dn":"Valerio","g":"M","l":"pt-BR","s":"","st":[],"p":[]},{"n":"pt-BR-YaraNeural","dn":"Yara","g":"F","l":"pt-BR","s":"","st":[],"p":["Well-Rounded","Animated","Bright"]},{"n":"pt-BR-Caio:MAI-Voice-2-Flash","dn":"Caio · MAI Voice 2 Flash","g":"M","l":"pt-BR","s":"MAI Voice 2 Flash","st":["angry","confused","determined","disgusted","embarrassed","excited","fearful","happy","hopeful","jealous","joyful","regretful","relieved","sad","shouting","softvoice","surprised","whispering"],"p":[]},{"n":"pt-BR-Caio:MAI-Voice-2.1-Flash","dn":"Caio · MAI Voice 2.1 Flash","g":"M","l":"pt-BR","s":"MAI Voice 2.1 Flash","st":["angry","confused","determined","disgusted","embarrassed","excited","fearful","happy","hopeful","jealous","joyful","regretful","relieved","sad","shouting","softvoice","surprised","whispering"],"p":[]},{"n":"pt-BR-Francisca:DragonLatestNeural","dn":"Francisca · Dragon","g":"F","l":"pt-BR","s":"Dragon","st":[],"p":[]},{"n":"pt-BR-Luana:MAI-Voice-2-Flash","dn":"Luana · MAI Voice 2 Flash","g":"F","l":"pt-BR","s":"MAI Voice 2 Flash","st":["angry","confused","determined","disgusted","embarrassed","excited","fearful","happy","hopeful","jealous","joyful","regretful","relieved","sad","shouting","softvoice","surprised","whispering"],"p":[]},{"n":"pt-BR-Luana:MAI-Voice-2.1-Flash","dn":"Luana · MAI Voice 2.1 Flash","g":"F","l":"pt-BR","s":"MAI Voice 2.1 Flash","st":["angry","confused","determined","disgusted","embarrassed","excited","fearful","happy","hopeful","jealous","joyful","regretful","relieved","sad","shouting","softvoice","surprised","whispering"],"p":[]},{"n":"pt-BR-Macerio:DragonLatestNeural","dn":"Macerio · Dragon","g":"M","l":"pt-BR","s":"Dragon","st":[],"p":[]},{"n":"pt-BR-Pedro:MAI-Voice-2-Flash","dn":"Pedro · MAI Voice 2 Flash","g":"M","l":"pt-BR","s":"MAI Voice 2 Flash","st":["confused","determined","embarrassed","excited","happy","hopeful","joyful","regretful","relieved","sad","softvoice","surprised"],"p":[]},{"n":"pt-BR-Pedro:MAI-Voice-2.1-Flash","dn":"Pedro · MAI Voice 2.1 Flash","g":"M","l":"pt-BR","s":"MAI Voice 2.1 Flash","st":["confused","determined","embarrassed","excited","happy","hopeful","joyful","regretful","relieved","sad","softvoice","surprised"],"p":[]},{"n":"pt-BR-Rafael:MAI-Voice-2-Flash","dn":"Rafael · MAI Voice 2 Flash","g":"M","l":"pt-BR","s":"MAI Voice 2 Flash","st":["angry","confused","determined","embarrassed","excited","happy","hopeful","joyful","regretful","relieved","sad","softvoice","surprised"],"p":[]},{"n":"pt-BR-Rafael:MAI-Voice-2.1-Flash","dn":"Rafael · MAI Voice 2.1 Flash","g":"M","l":"pt-BR","s":"MAI Voice 2.1 Flash","st":["angry","confused","determined","embarrassed","excited","happy","hopeful","joyful","regretful","relieved","sad","softvoice","surprised"],"p":[]},{"n":"pt-BR-Caio:MAI-Voice-2","dn":"Caio · MAI Voice 2","g":"M","l":"pt-BR","s":"MAI Voice 2","st":["angry","confused","determined","disgusted","embarrassed","excited","fearful","happy","hopeful","jealous","joyful","regretful","relieved","sad","shouting","softvoice","surprised","whispering"],"p":[]},{"n":"pt-BR-Caio:MAI-Voice-2.1","dn":"Caio · MAI Voice 2.1","g":"M","l":"pt-BR","s":"MAI Voice 2.1","st":["angry","confused","determined","disgusted","embarrassed","excited","fearful","happy","hopeful","jealous","joyful","regretful","relieved","sad","shouting","softvoice","surprised","whispering"],"p":[]},{"n":"pt-BR-Luana:MAI-Voice-2","dn":"Luana · MAI Voice 2","g":"F","l":"pt-BR","s":"MAI Voice 2","st":["angry","confused","determined","disgusted","embarrassed","excited","fearful","happy","hopeful","jealous","joyful","regretful","relieved","sad","shouting","softvoice","surprised","whispering"],"p":[]},{"n":"pt-BR-Luana:MAI-Voice-2.1","dn":"Luana · MAI Voice 2.1","g":"F","l":"pt-BR","s":"MAI Voice 2.1","st":["angry","confused","determined","disgusted","embarrassed","excited","fearful","happy","hopeful","jealous","joyful","regretful","relieved","sad","shouting","softvoice","surprised","whispering"],"p":[]},{"n":"pt-BR-Pedro:MAI-Voice-2","dn":"Pedro · MAI Voice 2","g":"M","l":"pt-BR","s":"MAI Voice 2","st":["confused","determined","embarrassed","excited","happy","hopeful","joyful","regretful","relieved","sad","softvoice","surprised"],"p":[]},{"n":"pt-BR-Pedro:MAI-Voice-2.1","dn":"Pedro · MAI Voice 2.1","g":"M","l":"pt-BR","s":"MAI Voice 2.1","st":["confused","determined","embarrassed","excited","happy","hopeful","joyful","regretful","relieved","sad","softvoice","surprised"],"p":[]},{"n":"pt-BR-Rafael:MAI-Voice-2","dn":"Rafael · MAI Voice 2","g":"M","l":"pt-BR","s":"MAI Voice 2","st":["angry","confused","determined","embarrassed","excited","happy","hopeful","joyful","regretful","relieved","sad","softvoice","surprised"],"p":[]},{"n":"pt-BR-Rafael:MAI-Voice-2.1","dn":"Rafael · MAI Voice 2.1","g":"M","l":"pt-BR","s":"MAI Voice 2.1","st":["angry","confused","determined","embarrassed","excited","happy","hopeful","joyful","regretful","relieved","sad","softvoice","surprised"],"p":[]},{"n":"pt-PT-RaquelNeural","dn":"Raquel","g":"F","l":"pt-PT","s":"","st":["sad","whispering"],"p":["Calm","Bright"]},{"n":"pt-PT-DuarteNeural","dn":"Duarte","g":"M","l":"pt-PT","s":"","st":[],"p":["Serious","Deep"]},{"n":"pt-PT-FernandaNeural","dn":"Fernanda","g":"F","l":"pt-PT","s":"","st":[],"p":["Crisp","Bright","Clear"]},{"n":"pt-PT-Grant:MAI-Voice-2.1-Flash","dn":"Grant · MAI Voice 2.1 Flash","g":"M","l":"pt-PT","s":"MAI Voice 2.1 Flash","st":[],"p":[]},{"n":"pt-PT-Harper:MAI-Voice-2.1-Flash","dn":"Harper · MAI Voice 2.1 Flash","g":"F","l":"pt-PT","s":"MAI Voice 2.1 Flash","st":[],"p":[]},{"n":"pt-PT-Rui:MAI-Voice-2-Flash","dn":"Rui · MAI Voice 2 Flash","g":"M","l":"pt-PT","s":"MAI Voice 2 Flash","st":["angry","confused","determined","embarrassed","excited","happy","hopeful","joyful","regretful","relieved","sad","softvoice","surprised"],"p":[]},{"n":"pt-PT-Rui:MAI-Voice-2.1-Flash","dn":"Rui · MAI Voice 2.1 Flash","g":"M","l":"pt-PT","s":"MAI Voice 2.1 Flash","st":["angry","confused","determined","embarrassed","excited","happy","hopeful","joyful","regretful","relieved","sad","softvoice","surprised"],"p":[]},{"n":"pt-PT-Grant:MAI-Voice-2.1","dn":"Grant · MAI Voice 2.1","g":"M","l":"pt-PT","s":"MAI Voice 2.1","st":[],"p":[]},{"n":"pt-PT-Harper:MAI-Voice-2.1","dn":"Harper · MAI Voice 2.1","g":"F","l":"pt-PT","s":"MAI Voice 2.1","st":[],"p":[]},{"n":"pt-PT-Rui:MAI-Voice-2","dn":"Rui · MAI Voice 2","g":"M","l":"pt-PT","s":"MAI Voice 2","st":["angry","confused","determined","embarrassed","excited","happy","hopeful","joyful","regretful","relieved","sad","softvoice","surprised"],"p":[]},{"n":"pt-PT-Rui:MAI-Voice-2.1","dn":"Rui · MAI Voice 2.1","g":"M","l":"pt-PT","s":"MAI Voice 2.1","st":["angry","confused","determined","embarrassed","excited","happy","hopeful","joyful","regretful","relieved","sad","softvoice","surprised"],"p":[]},{"n":"ro-RO-AlinaNeural","dn":"Alina","g":"F","l":"ro-RO","s":"","st":[],"p":[]},{"n":"ro-RO-EmilNeural","dn":"Emil","g":"M","l":"ro-RO","s":"","st":[],"p":[]},{"n":"ro-RO-Andrei:MAI-Voice-2-Flash","dn":"Andrei · MAI Voice 2 Flash","g":"M","l":"ro-RO","s":"MAI Voice 2 Flash","st":[],"p":[]},{"n":"ro-RO-Andrei:MAI-Voice-2.1-Flash","dn":"Andrei · MAI Voice 2.1 Flash","g":"M","l":"ro-RO","s":"MAI Voice 2.1 Flash","st":[],"p":[]},{"n":"ro-RO-Elena:MAI-Voice-2-Flash","dn":"Elena · MAI Voice 2 Flash","g":"F","l":"ro-RO","s":"MAI Voice 2 Flash","st":[],"p":[]},{"n":"ro-RO-Elena:MAI-Voice-2.1-Flash","dn":"Elena · MAI Voice 2.1 Flash","g":"F","l":"ro-RO","s":"MAI Voice 2.1 Flash","st":[],"p":[]},{"n":"ro-RO-Grant:MAI-Voice-2.1-Flash","dn":"Grant · MAI Voice 2.1 Flash","g":"M","l":"ro-RO","s":"MAI Voice 2.1 Flash","st":[],"p":[]},{"n":"ro-RO-Harper:MAI-Voice-2.1-Flash","dn":"Harper · MAI Voice 2.1 Flash","g":"F","l":"ro-RO","s":"MAI Voice 2.1 Flash","st":[],"p":[]},{"n":"ro-RO-Ioana:MAI-Voice-2-Flash","dn":"Ioana · MAI Voice 2 Flash","g":"F","l":"ro-RO","s":"MAI Voice 2 Flash","st":[],"p":[]},{"n":"ro-RO-Ioana:MAI-Voice-2.1-Flash","dn":"Ioana · MAI Voice 2.1 Flash","g":"F","l":"ro-RO","s":"MAI Voice 2.1 Flash","st":[],"p":[]},{"n":"ro-RO-Radu:MAI-Voice-2-Flash","dn":"Radu · MAI Voice 2 Flash","g":"M","l":"ro-RO","s":"MAI Voice 2 Flash","st":[],"p":[]},{"n":"ro-RO-Radu:MAI-Voice-2.1-Flash","dn":"Radu · MAI Voice 2.1 Flash","g":"M","l":"ro-RO","s":"MAI Voice 2.1 Flash","st":[],"p":[]},{"n":"ro-RO-Andrei:MAI-Voice-2","dn":"Andrei · MAI Voice 2","g":"M","l":"ro-RO","s":"MAI Voice 2","st":[],"p":[]},{"n":"ro-RO-Andrei:MAI-Voice-2.1","dn":"Andrei · MAI Voice 2.1","g":"M","l":"ro-RO","s":"MAI Voice 2.1","st":[],"p":[]},{"n":"ro-RO-Elena:MAI-Voice-2","dn":"Elena · MAI Voice 2","g":"F","l":"ro-RO","s":"MAI Voice 2","st":[],"p":[]},{"n":"ro-RO-Elena:MAI-Voice-2.1","dn":"Elena · MAI Voice 2.1","g":"F","l":"ro-RO","s":"MAI Voice 2.1","st":[],"p":[]},{"n":"ro-RO-Grant:MAI-Voice-2.1","dn":"Grant · MAI Voice 2.1","g":"M","l":"ro-RO","s":"MAI Voice 2.1","st":[],"p":[]},{"n":"ro-RO-Harper:MAI-Voice-2.1","dn":"Harper · MAI Voice 2.1","g":"F","l":"ro-RO","s":"MAI Voice 2.1","st":[],"p":[]},{"n":"ro-RO-Ioana:MAI-Voice-2","dn":"Ioana · MAI Voice 2","g":"F","l":"ro-RO","s":"MAI Voice 2","st":[],"p":[]},{"n":"ro-RO-Ioana:MAI-Voice-2.1","dn":"Ioana · MAI Voice 2.1","g":"F","l":"ro-RO","s":"MAI Voice 2.1","st":[],"p":[]},{"n":"ro-RO-Radu:MAI-Voice-2","dn":"Radu · MAI Voice 2","g":"M","l":"ro-RO","s":"MAI Voice 2","st":[],"p":[]},{"n":"ro-RO-Radu:MAI-Voice-2.1","dn":"Radu · MAI Voice 2.1","g":"M","l":"ro-RO","s":"MAI Voice 2.1","st":[],"p":[]},{"n":"ru-RU-SvetlanaNeural","dn":"Svetlana","g":"F","l":"ru-RU","s":"","st":[],"p":[]},{"n":"ru-RU-DmitryNeural","dn":"Dmitry","g":"M","l":"ru-RU","s":"","st":[],"p":[]},{"n":"ru-RU-DariyaNeural","dn":"Dariya","g":"F","l":"ru-RU","s":"","st":[],"p":["Crisp","Bright","Clear"]},{"n":"ru-RU-Grant:MAI-Voice-2.1-Flash","dn":"Grant · MAI Voice 2.1 Flash","g":"M","l":"ru-RU","s":"MAI Voice 2.1 Flash","st":[],"p":[]},{"n":"ru-RU-Harper:MAI-Voice-2.1-Flash","dn":"Harper · MAI Voice 2.1 Flash","g":"F","l":"ru-RU","s":"MAI Voice 2.1 Flash","st":[],"p":[]},{"n":"ru-RU-Lev:MAI-Voice-2-Flash","dn":"Lev · MAI Voice 2 Flash","g":"M","l":"ru-RU","s":"MAI Voice 2 Flash","st":["adventurous","caringempathy","curious","encouraging","excited","friendlycheerful","nostalgic","reflective","saddisappointed","serious"],"p":[]},{"n":"ru-RU-Lev:MAI-Voice-2.1-Flash","dn":"Lev · MAI Voice 2.1 Flash","g":"M","l":"ru-RU","s":"MAI Voice 2.1 Flash","st":["adventurous","caringempathy","curious","encouraging","excited","friendlycheerful","nostalgic","reflective","saddisappointed","serious"],"p":[]},{"n":"ru-RU-Masha:MAI-Voice-2-Flash","dn":"Masha · MAI Voice 2 Flash","g":"F","l":"ru-RU","s":"MAI Voice 2 Flash","st":["adventurous","caringempathy","curious","encouraging","excited","friendlycheerful","nostalgic","reflective","saddisappointed","serious"],"p":[]},{"n":"ru-RU-Masha:MAI-Voice-2.1-Flash","dn":"Masha · MAI Voice 2.1 Flash","g":"F","l":"ru-RU","s":"MAI Voice 2.1 Flash","st":["adventurous","caringempathy","curious","encouraging","excited","friendlycheerful","nostalgic","reflective","saddisappointed","serious"],"p":[]},{"n":"ru-RU-Grant:MAI-Voice-2.1","dn":"Grant · MAI Voice 2.1","g":"M","l":"ru-RU","s":"MAI Voice 2.1","st":[],"p":[]},{"n":"ru-RU-Harper:MAI-Voice-2.1","dn":"Harper · MAI Voice 2.1","g":"F","l":"ru-RU","s":"MAI Voice 2.1","st":[],"p":[]},{"n":"ru-RU-Lev:MAI-Voice-2","dn":"Lev · MAI Voice 2","g":"M","l":"ru-RU","s":"MAI Voice 2","st":["adventurous","caringempathy","curious","encouraging","excited","friendlycheerful","nostalgic","reflective","saddisappointed","serious"],"p":[]},{"n":"ru-RU-Lev:MAI-Voice-2.1","dn":"Lev · MAI Voice 2.1","g":"M","l":"ru-RU","s":"MAI Voice 2.1","st":["adventurous","caringempathy","curious","encouraging","excited","friendlycheerful","nostalgic","reflective","saddisappointed","serious"],"p":[]},{"n":"ru-RU-Masha:MAI-Voice-2","dn":"Masha · MAI Voice 2","g":"F","l":"ru-RU","s":"MAI Voice 2","st":["adventurous","caringempathy","curious","encouraging","excited","friendlycheerful","nostalgic","reflective","saddisappointed","serious"],"p":[]},{"n":"ru-RU-Masha:MAI-Voice-2.1","dn":"Masha · MAI Voice 2.1","g":"F","l":"ru-RU","s":"MAI Voice 2.1","st":["adventurous","caringempathy","curious","encouraging","excited","friendlycheerful","nostalgic","reflective","saddisappointed","serious"],"p":[]},{"n":"si-LK-ThiliniNeural","dn":"Thilini","g":"F","l":"si-LK","s":"","st":[],"p":[]},{"n":"si-LK-SameeraNeural","dn":"Sameera","g":"M","l":"si-LK","s":"","st":[],"p":[]},{"n":"sk-SK-ViktoriaNeural","dn":"Viktoria","g":"F","l":"sk-SK","s":"","st":[],"p":[]},{"n":"sk-SK-LukasNeural","dn":"Lukas","g":"M","l":"sk-SK","s":"","st":[],"p":[]},{"n":"sl-SI-PetraNeural","dn":"Petra","g":"F","l":"sl-SI","s":"","st":[],"p":[]},{"n":"sl-SI-RokNeural","dn":"Rok","g":"M","l":"sl-SI","s":"","st":[],"p":[]},{"n":"so-SO-UbaxNeural","dn":"Ubax","g":"F","l":"so-SO","s":"","st":[],"p":[]},{"n":"so-SO-MuuseNeural","dn":"Muuse","g":"M","l":"so-SO","s":"","st":[],"p":[]},{"n":"sq-AL-AnilaNeural","dn":"Anila","g":"F","l":"sq-AL","s":"","st":[],"p":[]},{"n":"sq-AL-IlirNeural","dn":"Ilir","g":"M","l":"sq-AL","s":"","st":[],"p":[]},{"n":"sr-Latn-RS-NicholasNeural","dn":"Nicholas","g":"M","l":"sr-Latn-RS","s":"","st":[],"p":[]},{"n":"sr-Latn-RS-SophieNeural","dn":"Sophie","g":"F","l":"sr-Latn-RS","s":"","st":[],"p":[]},{"n":"sr-RS-SophieNeural","dn":"Sophie","g":"F","l":"sr-RS","s":"","st":[],"p":[]},{"n":"sr-RS-NicholasNeural","dn":"Nicholas","g":"M","l":"sr-RS","s":"","st":[],"p":[]},{"n":"su-ID-TutiNeural","dn":"Tuti","g":"F","l":"su-ID","s":"","st":[],"p":[]},{"n":"su-ID-JajangNeural","dn":"Jajang","g":"M","l":"su-ID","s":"","st":[],"p":[]},{"n":"sv-SE-SofieNeural","dn":"Sofie","g":"F","l":"sv-SE","s":"","st":[],"p":[]},{"n":"sv-SE-MattiasNeural","dn":"Mattias","g":"M","l":"sv-SE","s":"","st":[],"p":[]},{"n":"sv-SE-HilleviNeural","dn":"Hillevi","g":"F","l":"sv-SE","s":"","st":[],"p":["Crisp","Bright","Clear"]},{"n":"sv-SE-Grant:MAI-Voice-2.1-Flash","dn":"Grant · MAI Voice 2.1 Flash","g":"M","l":"sv-SE","s":"MAI Voice 2.1 Flash","st":[],"p":[]},{"n":"sv-SE-Harper:MAI-Voice-2.1-Flash","dn":"Harper · MAI Voice 2.1 Flash","g":"F","l":"sv-SE","s":"MAI Voice 2.1 Flash","st":[],"p":[]},{"n":"sv-SE-Grant:MAI-Voice-2.1","dn":"Grant · MAI Voice 2.1","g":"M","l":"sv-SE","s":"MAI Voice 2.1","st":[],"p":[]},{"n":"sv-SE-Harper:MAI-Voice-2.1","dn":"Harper · MAI Voice 2.1","g":"F","l":"sv-SE","s":"MAI Voice 2.1","st":[],"p":[]},{"n":"sw-KE-ZuriNeural","dn":"Zuri","g":"F","l":"sw-KE","s":"","st":[],"p":[]},{"n":"sw-KE-RafikiNeural","dn":"Rafiki","g":"M","l":"sw-KE","s":"","st":[],"p":[]},{"n":"sw-TZ-RehemaNeural","dn":"Rehema","g":"F","l":"sw-TZ","s":"","st":[],"p":[]},{"n":"sw-TZ-DaudiNeural","dn":"Daudi","g":"M","l":"sw-TZ","s":"","st":[],"p":[]},{"n":"ta-IN-PallaviNeural","dn":"Pallavi","g":"F","l":"ta-IN","s":"","st":[],"p":[]},{"n":"ta-IN-ValluvarNeural","dn":"Valluvar","g":"M","l":"ta-IN","s":"","st":[],"p":[]},{"n":"ta-LK-SaranyaNeural","dn":"Saranya","g":"F","l":"ta-LK","s":"","st":[],"p":[]},{"n":"ta-LK-KumarNeural","dn":"Kumar","g":"M","l":"ta-LK","s":"","st":[],"p":[]},{"n":"ta-MY-KaniNeural","dn":"Kani","g":"F","l":"ta-MY","s":"","st":[],"p":[]},{"n":"ta-MY-SuryaNeural","dn":"Surya","g":"M","l":"ta-MY","s":"","st":[],"p":[]},{"n":"ta-SG-VenbaNeural","dn":"Venba","g":"F","l":"ta-SG","s":"","st":[],"p":[]},{"n":"ta-SG-AnbuNeural","dn":"Anbu","g":"M","l":"ta-SG","s":"","st":[],"p":[]},{"n":"te-IN-ShrutiNeural","dn":"Shruti","g":"F","l":"te-IN","s":"","st":[],"p":[]},{"n":"te-IN-MohanNeural","dn":"Mohan","g":"M","l":"te-IN","s":"","st":[],"p":[]},{"n":"th-TH-PremwadeeNeural","dn":"Premwadee","g":"F","l":"th-TH","s":"","st":[],"p":[]},{"n":"th-TH-NiwatNeural","dn":"Niwat","g":"M","l":"th-TH","s":"","st":[],"p":[]},{"n":"th-TH-AcharaNeural","dn":"Achara","g":"F","l":"th-TH","s":"","st":[],"p":["Crisp","Bright","Clear"]},{"n":"th-TH-Grant:MAI-Voice-2.1-Flash","dn":"Grant · MAI Voice 2.1 Flash","g":"M","l":"th-TH","s":"MAI Voice 2.1 Flash","st":[],"p":[]},{"n":"th-TH-Harper:MAI-Voice-2.1-Flash","dn":"Harper · MAI Voice 2.1 Flash","g":"F","l":"th-TH","s":"MAI Voice 2.1 Flash","st":[],"p":[]},{"n":"th-TH-Krit:MAI-Voice-2-Flash","dn":"Krit · MAI Voice 2 Flash","g":"M","l":"th-TH","s":"MAI Voice 2 Flash","st":["adventurous","caringempathy","curious","encouraging","excited","friendlycheerful","nostalgic","reflective","saddisappointed","serious"],"p":[]},{"n":"th-TH-Krit:MAI-Voice-2.1-Flash","dn":"Krit · MAI Voice 2.1 Flash","g":"M","l":"th-TH","s":"MAI Voice 2.1 Flash","st":["adventurous","caringempathy","curious","encouraging","excited","friendlycheerful","nostalgic","reflective","saddisappointed","serious"],"p":[]},{"n":"th-TH-Nattapong:MAI-Voice-2-Flash","dn":"Nattapong · MAI Voice 2 Flash","g":"M","l":"th-TH","s":"MAI Voice 2 Flash","st":["adventurous","caringempathy","curious","encouraging","excited","friendlycheerful","nostalgic","reflective","saddisappointed","serious"],"p":[]},{"n":"th-TH-Nattapong:MAI-Voice-2.1-Flash","dn":"Nattapong · MAI Voice 2.1 Flash","g":"M","l":"th-TH","s":"MAI Voice 2.1 Flash","st":["adventurous","caringempathy","curious","encouraging","excited","friendlycheerful","nostalgic","reflective","saddisappointed","serious"],"p":[]},{"n":"th-TH-Grant:MAI-Voice-2.1","dn":"Grant · MAI Voice 2.1","g":"M","l":"th-TH","s":"MAI Voice 2.1","st":[],"p":[]},{"n":"th-TH-Harper:MAI-Voice-2.1","dn":"Harper · MAI Voice 2.1","g":"F","l":"th-TH","s":"MAI Voice 2.1","st":[],"p":[]},{"n":"th-TH-Krit:MAI-Voice-2","dn":"Krit · MAI Voice 2","g":"M","l":"th-TH","s":"MAI Voice 2","st":["adventurous","caringempathy","curious","encouraging","excited","friendlycheerful","nostalgic","reflective","saddisappointed","serious"],"p":[]},{"n":"th-TH-Krit:MAI-Voice-2.1","dn":"Krit · MAI Voice 2.1","g":"M","l":"th-TH","s":"MAI Voice 2.1","st":["adventurous","caringempathy","curious","encouraging","excited","friendlycheerful","nostalgic","reflective","saddisappointed","serious"],"p":[]},{"n":"th-TH-Nattapong:MAI-Voice-2","dn":"Nattapong · MAI Voice 2","g":"M","l":"th-TH","s":"MAI Voice 2","st":["adventurous","caringempathy","curious","encouraging","excited","friendlycheerful","nostalgic","reflective","saddisappointed","serious"],"p":[]},{"n":"th-TH-Nattapong:MAI-Voice-2.1","dn":"Nattapong · MAI Voice 2.1","g":"M","l":"th-TH","s":"MAI Voice 2.1","st":["adventurous","caringempathy","curious","encouraging","excited","friendlycheerful","nostalgic","reflective","saddisappointed","serious"],"p":[]},{"n":"tr-TR-EmelNeural","dn":"Emel","g":"F","l":"tr-TR","s":"","st":[],"p":["Crisp","Bright","Clear"]},{"n":"tr-TR-AhmetNeural","dn":"Ahmet","g":"M","l":"tr-TR","s":"","st":[],"p":[]},{"n":"tr-TR-Aydin:MAI-Voice-2.1-Flash","dn":"Aydin · MAI Voice 2.1 Flash","g":"M","l":"tr-TR","s":"MAI Voice 2.1 Flash","st":["adventurous","caringempathy","curious","encouraging","excited","friendlycheerful","nostalgic","reflective","saddisappointed","serious"],"p":[]},{"n":"tr-TR-Aydın:MAI-Voice-2-Flash","dn":"Aydın · MAI Voice 2 Flash","g":"M","l":"tr-TR","s":"MAI Voice 2 Flash","st":["adventurous","caringempathy","curious","encouraging","excited","friendlycheerful","nostalgic","reflective","saddisappointed","serious"],"p":[]},{"n":"tr-TR-Elif:MAI-Voice-2-Flash","dn":"Elif · MAI Voice 2 Flash","g":"F","l":"tr-TR","s":"MAI Voice 2 Flash","st":["adventurous","caringempathy","curious","encouraging","excited","friendlycheerful","nostalgic","reflective","saddisappointed","serious"],"p":[]},{"n":"tr-TR-Elif:MAI-Voice-2.1-Flash","dn":"Elif · MAI Voice 2.1 Flash","g":"F","l":"tr-TR","s":"MAI Voice 2.1 Flash","st":["adventurous","caringempathy","curious","encouraging","excited","friendlycheerful","nostalgic","reflective","saddisappointed","serious"],"p":[]},{"n":"tr-TR-Grant:MAI-Voice-2.1-Flash","dn":"Grant · MAI Voice 2.1 Flash","g":"M","l":"tr-TR","s":"MAI Voice 2.1 Flash","st":[],"p":[]},{"n":"tr-TR-Harper:MAI-Voice-2.1-Flash","dn":"Harper · MAI Voice 2.1 Flash","g":"F","l":"tr-TR","s":"MAI Voice 2.1 Flash","st":[],"p":[]},{"n":"tr-TR-Aydin:MAI-Voice-2.1","dn":"Aydin · MAI Voice 2.1","g":"M","l":"tr-TR","s":"MAI Voice 2.1","st":["adventurous","caringempathy","curious","encouraging","excited","friendlycheerful","nostalgic","reflective","saddisappointed","serious"],"p":[]},{"n":"tr-TR-Aydın:MAI-Voice-2","dn":"Aydın · MAI Voice 2","g":"M","l":"tr-TR","s":"MAI Voice 2","st":["adventurous","caringempathy","curious","encouraging","excited","friendlycheerful","nostalgic","reflective","saddisappointed","serious"],"p":[]},{"n":"tr-TR-Elif:MAI-Voice-2","dn":"Elif · MAI Voice 2","g":"F","l":"tr-TR","s":"MAI Voice 2","st":["adventurous","caringempathy","curious","encouraging","excited","friendlycheerful","nostalgic","reflective","saddisappointed","serious"],"p":[]},{"n":"tr-TR-Elif:MAI-Voice-2.1","dn":"Elif · MAI Voice 2.1","g":"F","l":"tr-TR","s":"MAI Voice 2.1","st":["adventurous","caringempathy","curious","encouraging","excited","friendlycheerful","nostalgic","reflective","saddisappointed","serious"],"p":[]},{"n":"tr-TR-Grant:MAI-Voice-2.1","dn":"Grant · MAI Voice 2.1","g":"M","l":"tr-TR","s":"MAI Voice 2.1","st":[],"p":[]},{"n":"tr-TR-Harper:MAI-Voice-2.1","dn":"Harper · MAI Voice 2.1","g":"F","l":"tr-TR","s":"MAI Voice 2.1","st":[],"p":[]},{"n":"uk-UA-PolinaNeural","dn":"Polina","g":"F","l":"uk-UA","s":"","st":[],"p":[]},{"n":"uk-UA-OstapNeural","dn":"Ostap","g":"M","l":"uk-UA","s":"","st":[],"p":[]},{"n":"ur-IN-GulNeural","dn":"Gul","g":"F","l":"ur-IN","s":"","st":[],"p":[]},{"n":"ur-IN-SalmanNeural","dn":"Salman","g":"M","l":"ur-IN","s":"","st":[],"p":[]},{"n":"ur-PK-UzmaNeural","dn":"Uzma","g":"F","l":"ur-PK","s":"","st":[],"p":[]},{"n":"ur-PK-AsadNeural","dn":"Asad","g":"M","l":"ur-PK","s":"","st":[],"p":[]},{"n":"uz-UZ-MadinaNeural","dn":"Madina","g":"F","l":"uz-UZ","s":"","st":[],"p":[]},{"n":"uz-UZ-SardorNeural","dn":"Sardor","g":"M","l":"uz-UZ","s":"","st":[],"p":[]},{"n":"vi-VN-HoaiMyNeural","dn":"HoaiMy","g":"F","l":"vi-VN","s":"","st":[],"p":[]},{"n":"vi-VN-NamMinhNeural","dn":"NamMinh","g":"M","l":"vi-VN","s":"","st":[],"p":[]},{"n":"vi-VN-Grant:MAI-Voice-2.1-Flash","dn":"Grant · MAI Voice 2.1 Flash","g":"M","l":"vi-VN","s":"MAI Voice 2.1 Flash","st":[],"p":[]},{"n":"vi-VN-Harper:MAI-Voice-2.1-Flash","dn":"Harper · MAI Voice 2.1 Flash","g":"F","l":"vi-VN","s":"MAI Voice 2.1 Flash","st":[],"p":[]},{"n":"vi-VN-Grant:MAI-Voice-2.1","dn":"Grant · MAI Voice 2.1","g":"M","l":"vi-VN","s":"MAI Voice 2.1","st":[],"p":[]},{"n":"vi-VN-Harper:MAI-Voice-2.1","dn":"Harper · MAI Voice 2.1","g":"F","l":"vi-VN","s":"MAI Voice 2.1","st":[],"p":[]},{"n":"wuu-CN-XiaotongNeural","dn":"Xiaotong","g":"F","l":"wuu-CN","s":"","st":[],"p":["Warm","Friendly","Soothing"]},{"n":"wuu-CN-YunzheNeural","dn":"Yunzhe","g":"M","l":"wuu-CN","s":"","st":[],"p":["Calm","Deep","Gentle"]},{"n":"yue-CN-XiaoMinNeural","dn":"XiaoMin","g":"F","l":"yue-CN","s":"","st":[],"p":["Bright","Crisp","Confident"]},{"n":"yue-CN-YunSongNeural","dn":"YunSong","g":"M","l":"yue-CN","s":"","st":[],"p":["Deep","Calm","Formal"]},{"n":"zh-CN-Xiaoxiao:DragonHDFlashLatestNeural","dn":"晓晓 · Dragon HD Flash","g":"F","l":"zh-CN","s":"Dragon HD Flash","st":["angry","chat","cheerful","customer-service","excited","fearful","sad","voice-assistant","comforting","debating","disappointed","shy","sorry","strict","whispering"],"p":[]},{"n":"zh-CN-Xiaoxiao2:DragonHDFlashLatestNeural","dn":"Xiaoxiao2 · Dragon HD Flash","g":"F","l":"zh-CN","s":"Dragon HD Flash","st":["affectionate","angry","anxious","cheerful","curious","disappointed","empathetic","encouraging","excited","fearful","guilty","lonely","poetry-reading","sad","surprised","sentimental","sorry","story-telling","whispering","tired"],"p":[]},{"n":"zh-CN-Xiaochen:DragonHDLatestNeural","dn":"晓辰 · Dragon HD","g":"F","l":"zh-CN","s":"Dragon HD","st":[],"p":["Friendly","Casual","Upbeat"]},{"n":"zh-CN-Yunxiao:DragonHDFlashLatestNeural","dn":"Yunxiao · Dragon HD Flash","g":"M","l":"zh-CN","s":"Dragon HD Flash","st":[],"p":[]},{"n":"zh-CN-Yunyi:DragonHDFlashLatestNeural","dn":"Yunyi · Dragon HD Flash","g":"M","l":"zh-CN","s":"Dragon HD Flash","st":["assassin","captain","cavalier","prince","game-narrator","geomancer","poet"],"p":[]},{"n":"zh-CN-Yunfan:DragonHDLatestNeural","dn":"Yunfan · Dragon HD","g":"M","l":"zh-CN","s":"Dragon HD","st":[],"p":[]},{"n":"zh-CN-Xiaoyue:DragonHDOmniLatestNeural","dn":"Xiaoyue · Dragon HD Omni","g":"F","l":"zh-CN","s":"Dragon HD Omni","st":[],"p":[]},{"n":"zh-CN-Yunqi:DragonHDOmniLatestNeural","dn":"Yunqi · Dragon HD Omni","g":"M","l":"zh-CN","s":"Dragon HD Omni","st":[],"p":[]},{"n":"zh-CN-Maroonallegro:DragonHDOmniLatestNeural","dn":"Maroonallegro · Dragon HD Omni","g":"F","l":"zh-CN","s":"Dragon HD Omni","st":[],"p":[]},{"n":"zh-CN-XiaoxiaoNeural","dn":"晓晓","g":"F","l":"zh-CN","s":"","st":["assistant","chat","customerservice","newscast","affectionate","angry","calm","cheerful","disgruntled","fearful","gentle","lyrical","sad","serious","poetry-reading","friendly","chat-casual","whispering","sorry","excited"],"p":["Warm","Well-Rounded","Animated"]},{"n":"zh-CN-YunxiNeural","dn":"云希","g":"M","l":"zh-CN","s":"","st":["narration-relaxed","embarrassed","fearful","cheerful","disgruntled","serious","angry","sad","depressed","chat","assistant","newscast"],"p":["Bright","Animated","Cheerful"]},{"n":"zh-CN-YunjianNeural","dn":"云健","g":"M","l":"zh-CN","s":"","st":["narration-relaxed","sports-commentary","sports-commentary-excited","angry","disgruntled","cheerful","sad","serious","depressed","documentary-narration"],"p":["Deep","Casual","Engaging"]},{"n":"zh-CN-XiaoyiNeural","dn":"晓伊","g":"F","l":"zh-CN","s":"","st":["angry","disgruntled","affectionate","cheerful","fearful","sad","embarrassed","serious","gentle"],"p":["Bright","Emotional","Engaging"]},{"n":"zh-CN-YunyangNeural","dn":"云扬","g":"M","l":"zh-CN","s":"","st":["customerservice","narration-professional","newscast-casual"],"p":["Formal","Deep","Calm"]},{"n":"zh-CN-XiaochenNeural","dn":"晓辰","g":"F","l":"zh-CN","s":"","st":["livecommercial"],"p":["Friendly","Casual","Upbeat"]},{"n":"zh-CN-Xiaochen:DragonHDFlashLatestNeural","dn":"晓辰 · Dragon HD Flash","g":"F","l":"zh-CN","s":"Dragon HD Flash","st":["cheerful","debating","empathetic","live-commercial","poetry-reading","sad","sorry"],"p":[]},{"n":"zh-CN-XiaochenMultilingualNeural","dn":"晓辰 多语言","g":"F","l":"zh-CN","s":"","st":[],"p":["Friendly","Casual","Upbeat"]},{"n":"zh-CN-Xiaohan:DragonHDFlashLatestNeural","dn":"晓涵 · Dragon HD Flash","g":"F","l":"zh-CN","s":"Dragon HD Flash","st":["affectionate","angry","cheerful","complaining","fearful","gentle","sad","shy","strict"],"p":[]},{"n":"zh-CN-XiaohanNeural","dn":"晓涵","g":"F","l":"zh-CN","s":"","st":["calm","fearful","cheerful","disgruntled","serious","angry","sad","gentle","affectionate","embarrassed"],"p":["Gentle","Warm","Emotional"]},{"n":"zh-CN-Xiaoke:DragonHDFlashLatestNeural","dn":"Xiaoke · Dragon HD Flash","g":"F","l":"zh-CN","s":"Dragon HD Flash","st":["angry","customer-service","cute","excited","fearful","sad","sorry","whispering"],"p":[]},{"n":"zh-CN-XiaomengNeural","dn":"晓梦","g":"F","l":"zh-CN","s":"","st":["chat"],"p":["Gentle","Upbeat","Friendly"]},{"n":"zh-CN-Xiaomo:DragonHDFlashLatestNeural","dn":"晓墨 · Dragon HD Flash","g":"F","l":"zh-CN","s":"Dragon HD Flash","st":[],"p":[]},{"n":"zh-CN-XiaomoNeural","dn":"晓墨","g":"F","l":"zh-CN","s":"","st":["embarrassed","calm","fearful","cheerful","disgruntled","serious","angry","sad","depressed","affectionate","gentle","envious"],"p":["Deep","Casual","Calm"]},{"n":"zh-CN-Xiaoqi:DragonHDFlashLatestNeural","dn":"Xiaoqi · Dragon HD Flash","g":"F","l":"zh-CN","s":"Dragon HD Flash","st":["angry","cheerful","customer-service","excited","fearful","sad","sorry","whispering"],"p":[]},{"n":"zh-CN-XiaoqiuNeural","dn":"晓秋","g":"F","l":"zh-CN","s":"","st":[],"p":["Calm","Engaging","Soothing"]},{"n":"zh-CN-Xiaorou:DragonHDFlashLatestNeural","dn":"晓柔 · Dragon HD Flash","g":"F","l":"zh-CN","s":"Dragon HD Flash","st":[],"p":[]},{"n":"zh-CN-XiaorouNeural","dn":"晓柔","g":"F","l":"zh-CN","s":"","st":[],"p":["Cheerful","Engaging","Pleasant"]},{"n":"zh-CN-XiaoruiNeural","dn":"晓睿","g":"F","l":"zh-CN","s":"","st":["calm","fearful","angry","sad"],"p":["Confident","Emotional","Hoarse"]},{"n":"zh-CN-Xiaoshuang:DragonHDFlashLatestNeural","dn":"晓双 · Dragon HD Flash","g":"F","l":"zh-CN","s":"Dragon HD Flash","st":["chat"],"p":[]},{"n":"zh-CN-XiaoshuangMultilingualNeural","dn":"晓双 多语言","g":"F","l":"zh-CN","s":"","st":["chat"],"p":["Crisp","Cheerful","Bright"]},{"n":"zh-CN-XiaoshuangNeural","dn":"晓双","g":"F","l":"zh-CN","s":"","st":["chat"],"p":["Crisp","Cheerful","Bright"]},{"n":"zh-CN-XiaoxiaoDialectsNeural","dn":"晓晓 方言","g":"F","l":"zh-CN","s":"","st":[],"p":["Warm","Animated","Bright"]},{"n":"zh-CN-XiaoxiaoMultilingualNeural","dn":"晓晓 多语言","g":"F","l":"zh-CN","s":"","st":["affectionate","cheerful","empathetic","excited","poetry-reading","sorry","story"],"p":["Warm","Animated","Bright"]},{"n":"zh-CN-XiaoyanNeural","dn":"晓颜","g":"F","l":"zh-CN","s":"","st":[],"p":["Warm","Gentle","Empathetic"]},{"n":"zh-CN-Xiaoyi:DragonHDFlashLatestNeural","dn":"晓伊 · Dragon HD Flash","g":"F","l":"zh-CN","s":"Dragon HD Flash","st":["angry","cheerful","complaining","cute","gentle","nervous","sad","shy","strict"],"p":[]},{"n":"zh-CN-Xiaoyou:DragonHDFlashLatestNeural","dn":"晓悠 · Dragon HD Flash","g":"F","l":"zh-CN","s":"Dragon HD Flash","st":["chat","angry","cheerful","poetry-reading","sad","story-telling","cute"],"p":[]},{"n":"zh-CN-XiaoyouMultilingualNeural","dn":"晓悠 多语言","g":"F","l":"zh-CN","s":"","st":["chat","angry","cheerful","poetry-reading","sad","story","cute"],"p":["Crisp","Cheerful","Bright"]},{"n":"zh-CN-XiaoyouNeural","dn":"晓悠","g":"F","l":"zh-CN","s":"","st":[],"p":["Crisp","Cheerful","Bright"]},{"n":"zh-CN-Xiaoyu:DragonHDFlashLatestNeural","dn":"Xiaoyu · Dragon HD Flash","g":"F","l":"zh-CN","s":"Dragon HD Flash","st":["debating","angry","cheerful","comforting","sad","sorry"],"p":[]},{"n":"zh-CN-XiaoyuMultilingualNeural","dn":"晓宇 多语言","g":"F","l":"zh-CN","s":"","st":[],"p":["Deep","Confident","Casual"]},{"n":"zh-CN-XiaozhenNeural","dn":"晓甄","g":"F","l":"zh-CN","s":"","st":["angry","disgruntled","cheerful","fearful","sad","serious"],"p":["Calm","Serious","Confident"]},{"n":"zh-CN-Yunfan:DragonHDFlashLatestNeural","dn":"Yunfan · Dragon HD Flash","g":"M","l":"zh-CN","s":"Dragon HD Flash","st":[],"p":[]},{"n":"zh-CN-YunfanMultilingualNeural","dn":"Yunfan · 多语言","g":"M","l":"zh-CN","s":"","st":[],"p":["Clear","Calm"]},{"n":"zh-CN-Yunfeng:DragonHDFlashLatestNeural","dn":"云枫 · Dragon HD Flash","g":"M","l":"zh-CN","s":"Dragon HD Flash","st":[],"p":[]},{"n":"zh-CN-YunfengNeural","dn":"云枫","g":"M","l":"zh-CN","s":"","st":["angry","disgruntled","cheerful","fearful","sad","serious","depressed"],"p":["Confident","Animated","Emotional"]},{"n":"zh-CN-Yunhan:DragonHDFlashLatestNeural","dn":"Yunhan · Dragon HD Flash","g":"M","l":"zh-CN","s":"Dragon HD Flash","st":["angry","cheerful","curious","empathetic","encouraging","excited","guilty","lonely","sad","serious","sorry","whispering","surprised","tired"],"p":[]},{"n":"zh-CN-YunhaoNeural","dn":"云皓","g":"M","l":"zh-CN","s":"","st":["advertisement-upbeat"],"p":["Warm","Soft","Upbeat"]},{"n":"zh-CN-Yunjie:DragonHDFlashLatestNeural","dn":"云杰 · Dragon HD Flash","g":"M","l":"zh-CN","s":"Dragon HD Flash","st":[],"p":[]},{"n":"zh-CN-YunjieNeural","dn":"云杰","g":"M","l":"zh-CN","s":"","st":[],"p":["Casual","Confident","Warm"]},{"n":"zh-CN-Yunxi:DragonHDFlashLatestNeural","dn":"云希 · Dragon HD Flash","g":"M","l":"zh-CN","s":"Dragon HD Flash","st":["angry","chat","cheerful","complaining","depressed","fearful","news","sad","shy","strict","voice-assistant"],"p":[]},{"n":"zh-CN-Yunxia:DragonHDFlashLatestNeural","dn":"云夏 · Dragon HD Flash","g":"M","l":"zh-CN","s":"Dragon HD Flash","st":["affectionate","angry","comforting","cheerful","encouraging","excited","fearful","sad","surprised"],"p":[]},{"n":"zh-CN-YunxiaNeural","dn":"云夏","g":"M","l":"zh-CN","s":"","st":["calm","fearful","cheerful","angry","sad"],"p":["Cheerful","Friendly","Emotional"]},{"n":"zh-CN-YunxiaoMultilingualNeural","dn":"Yunxiao · 多语言","g":"M","l":"zh-CN","s":"","st":[],"p":["Gentle","Casual","Friendly"]},{"n":"zh-CN-Yunye:DragonHDFlashLatestNeural","dn":"云野 · Dragon HD Flash","g":"M","l":"zh-CN","s":"Dragon HD Flash","st":[],"p":[]},{"n":"zh-CN-YunyeNeural","dn":"云野","g":"M","l":"zh-CN","s":"","st":["embarrassed","calm","fearful","cheerful","disgruntled","serious","angry","sad"],"p":["Casual","Deep","Calm"]},{"n":"zh-CN-YunyiMultilingualNeural","dn":"云逸 多语言","g":"M","l":"zh-CN","s":"","st":[],"p":["Gentle","Casual","Friendly"]},{"n":"zh-CN-YunzeNeural","dn":"云泽","g":"M","l":"zh-CN","s":"","st":["calm","fearful","cheerful","disgruntled","serious","angry","sad","depressed","documentary-narration"],"p":["Deep","Confident","Formal"]},{"n":"zh-CN-Bo:MAI-Voice-2-Flash","dn":"Bo · MAI Voice 2 Flash","g":"M","l":"zh-CN","s":"MAI Voice 2 Flash","st":["angry","confused","determined","disgusted","embarrassed","excited","fearful","happy","hopeful","jealous","joyful","regretful","relieved","sad","shouting","softvoice","surprised","whispering"],"p":[]},{"n":"zh-CN-Bo:MAI-Voice-2.1-Flash","dn":"Bo · MAI Voice 2.1 Flash","g":"M","l":"zh-CN","s":"MAI Voice 2.1 Flash","st":["angry","confused","determined","disgusted","embarrassed","excited","fearful","happy","hopeful","jealous","joyful","regretful","relieved","sad","shouting","softvoice","surprised","whispering"],"p":[]},{"n":"zh-CN-Grant:MAI-Voice-2.1-Flash","dn":"Grant · MAI Voice 2.1 Flash","g":"M","l":"zh-CN","s":"MAI Voice 2.1 Flash","st":[],"p":[]},{"n":"zh-CN-Harper:MAI-Voice-2.1-Flash","dn":"Harper · MAI Voice 2.1 Flash","g":"F","l":"zh-CN","s":"MAI Voice 2.1 Flash","st":[],"p":[]},{"n":"zh-CN-Lan:MAI-Voice-2-Flash","dn":"Lan · MAI Voice 2 Flash","g":"F","l":"zh-CN","s":"MAI Voice 2 Flash","st":["angry","confused","disgusted","embarrassed","excited","fearful","happy","joyful","sad","surprised"],"p":[]},{"n":"zh-CN-Lan:MAI-Voice-2.1-Flash","dn":"Lan · MAI Voice 2.1 Flash","g":"F","l":"zh-CN","s":"MAI Voice 2.1 Flash","st":["angry","confused","disgusted","embarrassed","excited","fearful","happy","joyful","sad","surprised"],"p":[]},{"n":"zh-CN-Mei:MAI-Voice-2-Flash","dn":"Mei · MAI Voice 2 Flash","g":"F","l":"zh-CN","s":"MAI Voice 2 Flash","st":["angry","confused","determined","disgusted","embarrassed","excited","fearful","happy","hopeful","jealous","joyful","regretful","relieved","sad","shouting","softvoice","surprised","whispering"],"p":[]},{"n":"zh-CN-Mei:MAI-Voice-2.1-Flash","dn":"Mei · MAI Voice 2.1 Flash","g":"F","l":"zh-CN","s":"MAI Voice 2.1 Flash","st":["angry","confused","determined","disgusted","embarrassed","excited","fearful","happy","hopeful","jealous","joyful","regretful","relieved","sad","shouting","softvoice","surprised","whispering"],"p":[]},{"n":"zh-CN-Wei:MAI-Voice-2-Flash","dn":"Wei · MAI Voice 2 Flash","g":"M","l":"zh-CN","s":"MAI Voice 2 Flash","st":["angry","confused","disgusted","embarrassed","excited","fearful","happy","hopeful","jealous","joyful","regretful","sad","surprised"],"p":[]},{"n":"zh-CN-Xiaoqi:DragonLatestNeural","dn":"Xiaoqi · Dragon","g":"F","l":"zh-CN","s":"Dragon","st":[],"p":[]},{"n":"zh-CN-Yunfan:DragonLatestNeural","dn":"Yunfan · Dragon","g":"M","l":"zh-CN","s":"Dragon","st":[],"p":[]},{"n":"zh-CN-Bo:MAI-Voice-2","dn":"Bo · MAI Voice 2","g":"M","l":"zh-CN","s":"MAI Voice 2","st":["angry","confused","determined","disgusted","embarrassed","excited","fearful","happy","hopeful","jealous","joyful","regretful","relieved","sad","shouting","softvoice","surprised","whispering"],"p":[]},{"n":"zh-CN-Bo:MAI-Voice-2.1","dn":"Bo · MAI Voice 2.1","g":"M","l":"zh-CN","s":"MAI Voice 2.1","st":["angry","confused","determined","disgusted","embarrassed","excited","fearful","happy","hopeful","jealous","joyful","regretful","relieved","sad","shouting","softvoice","surprised","whispering"],"p":[]},{"n":"zh-CN-Grant:MAI-Voice-2.1","dn":"Grant · MAI Voice 2.1","g":"M","l":"zh-CN","s":"MAI Voice 2.1","st":[],"p":[]},{"n":"zh-CN-Harper:MAI-Voice-2.1","dn":"Harper · MAI Voice 2.1","g":"F","l":"zh-CN","s":"MAI Voice 2.1","st":[],"p":[]},{"n":"zh-CN-Lan:MAI-Voice-2","dn":"Lan · MAI Voice 2","g":"F","l":"zh-CN","s":"MAI Voice 2","st":["angry","confused","disgusted","embarrassed","excited","fearful","happy","joyful","sad","surprised"],"p":[]},{"n":"zh-CN-Lan:MAI-Voice-2.1","dn":"Lan · MAI Voice 2.1","g":"F","l":"zh-CN","s":"MAI Voice 2.1","st":["angry","confused","disgusted","embarrassed","excited","fearful","happy","joyful","sad","surprised"],"p":[]},{"n":"zh-CN-Mei:MAI-Voice-2","dn":"Mei · MAI Voice 2","g":"F","l":"zh-CN","s":"MAI Voice 2","st":["angry","confused","determined","disgusted","embarrassed","excited","fearful","happy","hopeful","jealous","joyful","regretful","relieved","sad","shouting","softvoice","surprised","whispering"],"p":[]},{"n":"zh-CN-Mei:MAI-Voice-2.1","dn":"Mei · MAI Voice 2.1","g":"F","l":"zh-CN","s":"MAI Voice 2.1","st":["angry","confused","determined","disgusted","embarrassed","excited","fearful","happy","hopeful","jealous","joyful","regretful","relieved","sad","shouting","softvoice","surprised","whispering"],"p":[]},{"n":"zh-CN-Wei:MAI-Voice-2","dn":"Wei · MAI Voice 2","g":"M","l":"zh-CN","s":"MAI Voice 2","st":["angry","confused","disgusted","embarrassed","excited","fearful","happy","hopeful","jealous","joyful","regretful","sad","surprised"],"p":[]},{"n":"zh-CN-guangxi-YunqiNeural","dn":"云奇 广西","g":"M","l":"zh-CN-guangxi","s":"","st":[],"p":["Engaging","Casual","Animated"]},{"n":"zh-CN-henan-YundengNeural","dn":"云登","g":"M","l":"zh-CN-henan","s":"","st":[],"p":["Casual","Friendly","Animated"]},{"n":"zh-CN-liaoning-XiaobeiNeural","dn":"晓北 辽宁","g":"F","l":"zh-CN-liaoning","s":"","st":[],"p":["Friendly","Casual","Gentle"]},{"n":"zh-CN-liaoning-YunbiaoNeural","dn":"云彪 辽宁","g":"M","l":"zh-CN-liaoning","s":"","st":[],"p":["Confident","Casual","Cheerful"]},{"n":"zh-CN-shaanxi-XiaoniNeural","dn":"晓妮","g":"F","l":"zh-CN-shaanxi","s":"","st":[],"p":["Confident","Engaging","Casual"]},{"n":"zh-CN-shandong-YunxiangNeural","dn":"云翔","g":"M","l":"zh-CN-shandong","s":"","st":[],"p":["Casual","Animated","Strong"]},{"n":"zh-CN-sichuan-YunxiNeural","dn":"云希 四川","g":"M","l":"zh-CN-sichuan","s":"","st":[],"p":["Casual","Animated","Gentle"]},{"n":"zh-HK-HiuMaanNeural","dn":"曉曼","g":"F","l":"zh-HK","s":"","st":[],"p":["Bright","Upbeat"]},{"n":"zh-HK-WanLungNeural","dn":"雲龍","g":"M","l":"zh-HK","s":"","st":[],"p":["Calm","Formal"]},{"n":"zh-HK-HiuGaaiNeural","dn":"曉佳","g":"F","l":"zh-HK","s":"","st":[],"p":["Crisp","Bright","Clear"]},{"n":"zh-TW-HsiaoChenNeural","dn":"曉臻","g":"F","l":"zh-TW","s":"","st":[],"p":["Soft","Caring"]},{"n":"zh-TW-YunJheNeural","dn":"雲哲","g":"M","l":"zh-TW","s":"","st":[],"p":["Engaging","Gentle"]},{"n":"zh-TW-HsiaoYuNeural","dn":"曉雨","g":"F","l":"zh-TW","s":"","st":[],"p":["Crisp","Bright","Clear"]},{"n":"zu-ZA-ThandoNeural","dn":"Thando","g":"F","l":"zu-ZA","s":"","st":[],"p":[]},{"n":"zu-ZA-ThembaNeural","dn":"Themba","g":"M","l":"zu-ZA","s":"","st":[],"p":[]}] };
+});
+
+/* ==================== mp3.js ==================== */
+/**
+ * mp3.js —— MP3 帧级解析与拼接
+ *
+ * 服务端对每个请求返回一段独立编码的 MPEG-2 Layer III / 24kHz / 48kbps / 单声道音频，
+ * 帧长恒定（144 字节）。同构块可直接按帧边界字节拼接，无需重编码。
+ */
+(function (root, factory) {
+  if (typeof module === "object" && module.exports) module.exports = factory();
+  else root.Mp3Tool = factory();
+})(typeof self !== "undefined" ? self : this, function () {
+  "use strict";
+
+  var BITRATE = {
+    1: [0, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320],
+    2: [0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160],
+  };
+  var SAMPLE_RATE = {
+    3: [44100, 48000, 32000], // MPEG-1
+    2: [22050, 24000, 16000], // MPEG-2
+    0: [11025, 12000, 8000],  // MPEG-2.5
+  };
+
+  /**
+   * 读一个帧头，返回帧信息；不是合法帧头则返回 null。
+   * @param {Uint8Array} b
+   * @param {number} o 偏移
+   */
+  function readHeader(b, o) {
+    if (o + 4 > b.length) return null;
+    if (b[o] !== 0xff || (b[o + 1] & 0xe0) !== 0xe0) return null;
+
+    var verBits = (b[o + 1] >> 3) & 0x03;  // 3=MPEG-1, 2=MPEG-2, 0=MPEG-2.5
+    var layerBits = (b[o + 1] >> 1) & 0x03; // 1=Layer III
+    var brIdx = (b[o + 2] >> 4) & 0x0f;
+    var srIdx = (b[o + 2] >> 2) & 0x03;
+    var pad = (b[o + 2] >> 1) & 0x01;
+
+    if (verBits === 1) return null;          // 保留值
+    if (layerBits === 0) return null;        // 保留值
+    if (brIdx === 0 || brIdx === 15) return null; // 自由格式 / 非法
+    if (srIdx === 3) return null;            // 保留值
+
+    var ver = verBits === 3 ? 1 : 2;
+    var layer = 4 - layerBits;               // 3=LayerI → 1, 1=LayerIII → 3
+    var table = ver === 1 ? BITRATE[1] : BITRATE[2];
+    var bitrate = table[brIdx] * 1000;
+    var sampleRate = SAMPLE_RATE[verBits][srIdx];
+
+    // 帧长：Layer I 以 4 字节槽为单位，Layer II/III 用 144(MPEG-1)/72(MPEG-2) 系数
+    var length;
+    if (layer === 1) {
+      length = Math.floor((12 * bitrate / sampleRate + pad) * 4);
+    } else {
+      length = Math.floor((ver === 1 ? 144 : 72) * bitrate / sampleRate) + pad;
+    }
+    // 每帧承载的采样数（用于时长换算）
+    var samples = layer === 1 ? 384 : (layer === 2 ? 1152 : (ver === 1 ? 1152 : 576));
+
+    return {
+      offset: o,
+      version: ver === 1 ? 1 : 2,
+      layer: layer,
+      bitrate: bitrate,
+      sampleRate: sampleRate,
+      padding: pad,
+      channels: ((b[o + 3] >> 6) & 0x03) === 3 ? 1 : 2,
+      length: length,
+      samples: samples,
+    };
+  }
+
+  /**
+   * 扫描一段数据，定位第一个有效帧头，并按帧前进到最后一个完整帧的结束位置。
+   * @returns {{start:number,end:number,frames:number,info:object|null}}
+   */
+  function scan(b) {
+    var start = -1, info = null;
+    var limit = Math.min(b.length - 4, 4096); // 前导若有 ID3/垃圾，最多找 4KB
+    for (var i = 0; i <= limit; i++) {
+      var h = readHeader(b, i);
+      if (h && h.length >= 24) {
+        // 双帧校验，避免误判
+        var h2 = readHeader(b, i + h.length);
+        if (h2 && h2.length >= 24) { start = i; info = h; break; }
+        if (i + h.length + 4 > b.length) { start = i; info = h; break; }
+      }
+    }
+    if (start < 0) return { start: -1, end: -1, frames: 0, info: null };
+
+    var pos = start, frames = 0;
+    while (true) {
+      var f = readHeader(b, pos);
+      if (!f || pos + f.length > b.length) break;
+      pos += f.length;
+      frames++;
+    }
+    // 若只有一帧（极短文本），仍返回该帧
+    if (frames === 0) {
+      var single = readHeader(b, start);
+      if (single && start + single.length <= b.length) {
+        return { start: start, end: start + single.length, frames: 1, info: single };
+      }
+      return { start: -1, end: -1, frames: 0, info: null };
+    }
+    return { start: start, end: pos, frames: frames, info: info };
+  }
+
+  /** 去掉前导垃圾与尾部残帧，只留完整帧 */
+  function toFrames(b) {
+    var s = scan(b);
+    if (s.start < 0) return { bytes: new Uint8Array(0), frames: 0, info: null };
+    return { bytes: b.subarray(s.start, s.end), frames: s.frames, info: s.info };
+  }
+
+  /**
+   * 把多段 MP3 按帧边界拼成一段。
+   * @param {Uint8Array[]} chunks 顺序与播放顺序一致
+   * @returns {{bytes:Uint8Array, frames:number, info:object|null, skipped:number[]}}
+   */
+  function concat(chunks) {
+    var parts = [];
+    var total = 0, frames = 0, info = null;
+    var skipped = [];
+    for (var i = 0; i < chunks.length; i++) {
+      var r = toFrames(chunks[i]);
+      if (r.frames === 0) { skipped.push(i); continue; }
+      if (!info) info = r.info;
+      parts.push(r.bytes);
+      total += r.bytes.length;
+      frames += r.frames;
+    }
+    var out = new Uint8Array(total);
+    var off = 0;
+    for (var j = 0; j < parts.length; j++) {
+      out.set(parts[j], off);
+      off += parts[j].length;
+    }
+    return { bytes: out, frames: frames, info: info, skipped: skipped };
+  }
+
+  /** 估算时长（秒） */
+  function durationSec(bytesOrFrames, isFrames) {
+    var frames = isFrames ? bytesOrFrames : Math.floor(bytesOrFrames / 144);
+    return (frames * 576) / 24000;
+  }
+
+  /** 格式描述，便于诊断与断言 */
+  function describe(info) {
+    if (!info) return "未知";
+    return (
+      "MPEG-" + info.version + " Layer" +
+      (info.layer === 3 ? "III" : info.layer === 2 ? "II" : "I") +
+      " / " + (info.bitrate / 1000) + "kbps / " + info.sampleRate + "Hz / " +
+      (info.channels === 1 ? "单声道" : "立体声") + " / 帧长" + info.length + "B"
+    );
+  }
+
+  function formatTime(sec) {
+    sec = Math.max(0, Math.round(sec));
+    var m = Math.floor(sec / 60), s = sec % 60;
+    return m + ":" + (s < 10 ? "0" : "") + s;
+  }
+
+  return {
+    readHeader: readHeader,
+    scan: scan,
+    toFrames: toFrames,
+    concat: concat,
+    durationSec: durationSec,
+    describe: describe,
+    formatTime: formatTime,
+  };
+});
+
+/* ==================== split.js ==================== */
+/**
+ * split.js —— 文本切分
+ *
+ * 目标：把任意长度的文本切成适合单次合成的块，同时尽量不破坏语言的呼吸节奏。
+ * 优先级：段落 > 句子 > 分句 > 硬切。
+ */
+(function (root, factory) {
+  if (typeof module === "object" && module.exports) module.exports = factory();
+  else root.TextSplit = factory();
+})(typeof self !== "undefined" ? self : this, function () {
+  "use strict";
+
+  var SENT_END = "。！？!?；;…";
+  var SOFT_END = "，,、：:）)】」』”";
+
+  /** 归一化：统一换行、去零宽字符、压缩空白行 */
+  function normalize(text) {
+    return String(text == null ? "" : text)
+      .replace(/\r\n?/g, "\n")
+      .replace(/[\u200b-\u200d\ufeff]/g, "")
+      .replace(/\n{3,}/g, "\n\n")
+      .replace(/[ \t]+\n/g, "\n")
+      .trim();
+  }
+
+  /** 把一段文字切成句子（保留句末标点） */
+  function splitSentences(para) {
+    var out = [];
+    var buf = "";
+    for (var i = 0; i < para.length; i++) {
+      var ch = para[i];
+      buf += ch;
+      if (ch === "\n" || SENT_END.indexOf(ch) >= 0) {
+        // 句末连续标点（如 ”！）一起收进来
+        while (i + 1 < para.length && (SENT_END.indexOf(para[i + 1]) >= 0 || para[i + 1] === '"' || para[i + 1] === "\u201d")) {
+          buf += para[++i];
+        }
+        if (buf.trim()) out.push(buf.trim());
+        buf = "";
+      }
+    }
+    if (buf.trim()) out.push(buf.trim());
+    return out;
+  }
+
+  /** 超长单句：先找软边界（逗号等），再硬切 */
+  function breakLong(sentence, max) {
+    var pieces = [];
+    var buf = "";
+    for (var i = 0; i < sentence.length; i++) {
+      buf += sentence[i];
+      if (buf.length >= max) {
+        // 往前回退到最近的软边界，让切口落在自然停顿处
+        var cut = -1;
+        for (var k = buf.length - 1; k >= Math.floor(max * 0.6); k--) {
+          if (SOFT_END.indexOf(buf[k]) >= 0) { cut = k + 1; break; }
+        }
+        if (cut > 0) {
+          pieces.push(buf.slice(0, cut));
+          buf = buf.slice(cut);
+        } else {
+          pieces.push(buf);
+          buf = "";
+        }
+      }
+    }
+    if (buf) pieces.push(buf);
+    return pieces;
+  }
+
+  /**
+   * 主入口。
+   * @param {string} text
+   * @param {object} [opts] {maxChars?:number, minChars?:number}
+   * @returns {string[]}
+   */
+  function split(text, opts) {
+    opts = opts || {};
+    var max = Math.max(120, opts.maxChars || 800);
+    var min = Math.max(20, opts.minChars || Math.floor(max * 0.25));
+
+    var t = normalize(text);
+    if (!t) return [];
+
+    var paras = t.split(/\n{2,}/);
+    var units = []; // 先展开成"句子"级单元
+    for (var p = 0; p < paras.length; p++) {
+      var para = paras[p].trim();
+      if (!para) continue;
+      var sents = splitSentences(para);
+      for (var s = 0; s < sents.length; s++) {
+        if (sents[s].length <= max) units.push(sents[s]);
+        else units = units.concat(breakLong(sents[s], max));
+      }
+    }
+    if (!units.length) return [];
+
+    // 贪心聚合
+    var chunks = [];
+    var cur = "";
+    for (var u = 0; u < units.length; u++) {
+      var unit = units[u];
+      if (!cur) { cur = unit; continue; }
+      if (cur.length + 1 + unit.length <= max) {
+        cur += "\n" + unit;
+      } else {
+        chunks.push(cur);
+        cur = unit;
+      }
+    }
+    if (cur) chunks.push(cur);
+
+    // 尾块过短则并入上一块（避免出现"嗯。"这种碎片块）
+    if (chunks.length >= 2 && chunks[chunks.length - 1].length < min) {
+      chunks[chunks.length - 2] += "\n" + chunks.pop();
+    }
+    return chunks;
+  }
+
+  /** 统计：字符数（不含空白）、块数、预估时长 */
+  function stats(text, opts) {
+    var chunks = split(text, opts);
+    var chars = 0;
+    for (var i = 0; i < chunks.length; i++) {
+      chars += chunks[i].replace(/\s/g, "").length;
+    }
+    // 实测中文语速约 4.7~5.0 字/秒，取 4.6 保守估计
+    var seconds = chars / 4.6;
+    return {
+      chunks: chunks.length,
+      chars: chars,
+      rawChars: normalize(text).length,
+      seconds: seconds,
+      bytesEstimate: Math.round(seconds * 6000), // 48kbps ≈ 6KB/s
+    };
+  }
+
+  return { normalize: normalize, splitSentences: splitSentences, split: split, stats: stats };
+});
+
+/* ==================== azure.js ==================== */
+/**
+ * azure.js —— 语音通道（签名 + 换 token + 合成端点）
+ *
+ * 引擎与界面分离：浏览器与 Node 共用同一份代码，纯逻辑可离线单测。
+ * 浏览器端必须用 referrerPolicy:"no-referrer" —— 服务端见到 Referer 会直接 401。
+ */
+(function (root, factory) {
+  if (typeof module === "object" && module.exports) module.exports = factory();
+  else root.AzureChannel = factory();
+})(typeof self !== "undefined" ? self : this, function () {
+  "use strict";
+
+  /* ------------------------------------------------------------------ 常量 */
+
+  // 通道内置密钥（base64 原始字节，参与 HMAC-SHA256）
+  var APP_KEY_B64 =
+    "oik6PdDdMnOXemTbwvMn9de/h9lFnfBaCWbGMMZqqoSaQaqUOqjVGm5NqsmjcBI1x+sS9ugjB55HEJWRiFXYFw==";
+  var ENDPOINT_URL = "https://dev.microsofttranslator.com/apps/endpoint?api-version=1.0";
+  var AWS_UA =
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
+    "(KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36 Edg/143.0.0.0";
+
+  // 服务端输出固定为 MPEG-2 Layer III / 24kHz / 48kbps / 单声道
+  var OUTPUT_FORMAT = "audio-24khz-48kbitrate-mono-mp3";
+  var FRAME_BYTES = 144; // 576 采样/帧 ÷ 8 × 48000 ÷ 24000
+
+  /* ------------------------------------------------------------ 字节工具 */
+
+  function b64ToBytes(b64) {
+    if (typeof atob === "function") {
+      var bin = atob(b64);
+      var out = new Uint8Array(bin.length);
+      for (var i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+      return out;
+    }
+    return new Uint8Array(Buffer.from(b64, "base64")); // Node 兜底
+  }
+
+  function bytesToB64(bytes) {
+    var bin = "";
+    for (var i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+    if (typeof btoa === "function") return btoa(bin);
+    return Buffer.from(bytes).toString("base64");
+  }
+
+  function strToBytes(s) {
+    if (typeof TextEncoder === "function") return new TextEncoder().encode(s);
+    return new Uint8Array(Buffer.from(s, "utf-8"));
+  }
+
+  function bytesToStr(bytes) {
+    if (typeof TextDecoder === "function") return new TextDecoder().decode(bytes);
+    return Buffer.from(bytes).toString("utf-8");
+  }
+
+  function randomHex32() {
+    if (typeof crypto !== "undefined" && crypto.randomUUID) {
+      return crypto.randomUUID().replace(/-/g, "");
+    }
+    var s = "";
+    for (var i = 0; i < 32; i++) s += "0123456789abcdef"[Math.floor(Math.random() * 16)];
+    return s;
+  }
+
+  async function hmacSha256(keyBytes, msgBytes) {
+    var key = await crypto.subtle.importKey(
+      "raw", keyBytes, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
+    );
+    return new Uint8Array(await crypto.subtle.sign("HMAC", key, msgBytes));
+  }
+
+  /* --------------------------------------------------------------- 签名 */
+
+  /**
+   * 生成 X-MT-Signature。
+   * 格式：MSTranslatorAndroidApp::<base64签名>::<RFC1123 UTC 时间>::<32位hex>
+   * @param {string} url 完整请求地址
+   * @param {{now?:number|Date, uuid?:string}} [opts] 便于测试注入
+   */
+  async function makeSignature(url, opts) {
+    opts = opts || {};
+    var now = opts.now ? new Date(opts.now) : new Date();
+    var uid = opts.uuid || randomHex32();
+    var date = now.toUTCString(); // "Thu, 15 Oct 2026 11:59:38 GMT"（与 RFC1123 一致）
+    var encoded = encodeURIComponent(url.split("://")[1]);
+    var msg = ("MSTranslatorAndroidApp" + encoded + date + uid).toLowerCase();
+    var sig = await hmacSha256(b64ToBytes(APP_KEY_B64), strToBytes(msg));
+    return "MSTranslatorAndroidApp::" + bytesToB64(sig) + "::" + date + "::" + uid;
+  }
+
+  /* ----------------------------------------------------------- token 管理 */
+
+  var _cache = { token: null, region: null, expMs: 0 };
+  var _inflight = null;
+  var REFRESH_AHEAD_MS = 180 * 1000; // 提前 3 分钟续期
+
+  function jwtExpMs(token) {
+    try {
+      var part = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
+      var json = bytesToStr(b64ToBytes(part));
+      var exp = JSON.parse(json).exp;
+      if (exp) return exp * 1000;
+    } catch (e) { /* 解析失败走兜底 */ }
+    return Date.now() + 30 * 60 * 1000;
+  }
+
+  async function requestEndpoint() {
+    var sig = await makeSignature(ENDPOINT_URL);
+    var res = await fetch(ENDPOINT_URL, {
+      method: "POST",
+      referrerPolicy: "no-referrer", // ★ 关键：带 Referer 会被判 401
+      headers: {
+        "Accept-Language": "zh-Hans",
+        "X-ClientVersion": "4.0.530a 5fe1dc6c",
+        "X-UserId": "0f04d16a175c411e",
+        "X-HomeGeographicRegion": "zh-Hans-CN",
+        "X-ClientTraceId": randomHex32(),
+        "X-MT-Signature": sig,
+        "Content-Type": "application/json; charset=utf-8",
+      },
+    });
+    if (!res.ok) {
+      var detail = "";
+      try { detail = (await res.text()).slice(0, 200); } catch (e) { /* 忽略 */ }
+      throw new Error("获取语音通道失败（HTTP " + res.status + "）" + (detail ? "：" + detail : ""));
+    }
+    var data = await res.json();
+    if (!data || !data.t || !data.r) throw new Error("语音通道返回数据不完整");
+    _cache = { token: data.t, region: data.r, expMs: jwtExpMs(data.t) };
+    return _cache;
+  }
+
+  /** 取当前可用的 token（缓存 + 单例锁，避免并发重复请求） */
+  async function getToken(force) {
+    var now = Date.now();
+    if (!force && _cache.token && now < _cache.expMs - REFRESH_AHEAD_MS) return _cache;
+    if (_inflight) return _inflight;
+    _inflight = requestEndpoint();
+    try {
+      return await _inflight;
+    } finally {
+      _inflight = null;
+    }
+  }
+
+  function peekCache() {
+    return { hasToken: !!_cache.token, region: _cache.region, expMs: _cache.expMs };
+  }
+
+  function resetCache() {
+    _cache = { token: null, region: null, expMs: 0 };
+    _inflight = null;
+  }
+
+  /* --------------------------------------------------------------- 合成 */
+
+  function escapeXml(s) {
+    return String(s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&apos;");
+  }
+
+  /**
+   * 拼一段 SSML。
+   * @param {object} o {text, voice, locale, style, rate, pitch, volume}
+   */
+  function buildSsml(o) {
+    var locale = o.locale || "zh-CN";
+    var prosody =
+      "<prosody rate='" + pct(o.rate) + "' pitch='" + hz(o.pitch) + "' volume='" + pct(o.volume) + "'>" +
+      escapeXml(o.text) +
+      "</prosody>";
+    var body = o.style
+      ? "<mstts:express-as style='" + escapeXml(o.style) + "'>" + prosody + "</mstts:express-as>"
+      : prosody;
+    var ns = o.style ? " xmlns:mstts='https://www.w3.org/2001/mstts'" : "";
+    return (
+      "<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis'" + ns +
+      " xml:lang='" + locale + "'>" +
+      "<voice name='" + escapeXml(o.voice) + "'>" + body + "</voice>" +
+      "</speak>"
+    );
+  }
+
+  function pct(v) {
+    var n = Number(v) || 0;
+    return (n >= 0 ? "+" : "") + n.toFixed(0) + "%";
+  }
+
+  function hz(v) {
+    var n = Number(v) || 0;
+    return (n >= 0 ? "+" : "") + n.toFixed(0) + "Hz";
+  }
+
+  /**
+   * 合成一段文本，返回 Uint8Array(MP3)。
+   * @param {string} text
+   * @param {object} opts {voice, locale, style, rate, pitch, volume}
+   */
+  async function synthesize(text, opts) {
+    var o = Object.assign({}, opts, { text: text });
+    var ssml = buildSsml(o);
+    var lastErr = null;
+    for (var attempt = 0; attempt < 3; attempt++) {
+      var cred = await getToken(attempt > 0); // 失败重试时强制换 token
+      var url = "https://" + cred.region + ".tts.speech.microsoft.com/cognitiveservices/v1";
+      var res;
+      try {
+        res = await fetch(url, {
+          method: "POST",
+          referrerPolicy: "no-referrer",
+          headers: {
+            Authorization: cred.token,
+            "Content-Type": "application/ssml+xml",
+            "X-Microsoft-OutputFormat": OUTPUT_FORMAT,
+          },
+          body: ssml,
+        });
+      } catch (e) {
+        lastErr = new Error("网络请求失败：" + e.message);
+        continue;
+      }
+      if (res.ok) {
+        var buf = new Uint8Array(await res.arrayBuffer());
+        if (buf.length > 0) return buf;
+        lastErr = new Error("服务端返回了空音频（该音色可能已下架）");
+        continue;
+      }
+      var msg = "";
+      try { msg = (await res.text()).slice(0, 300); } catch (e2) { /* 忽略 */ }
+      if (res.status === 401 || res.status === 403) {
+        resetCache();
+        lastErr = new Error("语音通道鉴权失效（HTTP " + res.status + "）");
+        continue;
+      }
+      if (res.status === 429) {
+        lastErr = new Error("请求过于频繁被限流（HTTP 429），请稍后重试或减少并发");
+        await sleep(800 * (attempt + 1));
+        continue;
+      }
+      lastErr = new Error("合成失败（HTTP " + res.status + "）" + (msg ? "：" + msg : ""));
+      if (/not support|unsupported|voice/i.test(msg)) break; // 音色不支持，重试无意义
+    }
+    throw lastErr || new Error("合成失败");
+  }
+
+  /** 拉取服务端音色清单（同一通道） */
+  async function listVoices() {
+    var cred = await getToken();
+    var url = "https://" + cred.region + ".tts.speech.microsoft.com/cognitiveservices/voices/list";
+    var res = await fetch(url, {
+      method: "GET",
+      referrerPolicy: "no-referrer",
+      headers: { Authorization: cred.token },
+    });
+    if (!res.ok) throw new Error("获取音色清单失败（HTTP " + res.status + "）");
+    return await res.json();
+  }
+
+  function sleep(ms) {
+    return new Promise(function (r) { setTimeout(r, ms); });
+  }
+
+  /* --------------------------------------------------------------- 导出 */
+
+  return {
+    ENDPOINT_URL: ENDPOINT_URL,
+    APP_KEY_B64: APP_KEY_B64,
+    OUTPUT_FORMAT: OUTPUT_FORMAT,
+    FRAME_BYTES: FRAME_BYTES,
+    UA: AWS_UA,
+    makeSignature: makeSignature,
+    getToken: getToken,
+    peekCache: peekCache,
+    resetCache: resetCache,
+    buildSsml: buildSsml,
+    escapeXml: escapeXml,
+    synthesize: synthesize,
+    listVoices: listVoices,
+    jwtExpMs: jwtExpMs,
+    b64ToBytes: b64ToBytes,
+    bytesToB64: bytesToB64,
+    strToBytes: strToBytes,
+  };
+});
+
+/* ==================== voices.js ==================== */
+/**
+ * voices.js —— 音色访问层
+ *
+ * 数据来自 Azure 官方 voices/list（离线内置）。中文显示名优先采用官方 LocalName，
+ * 官方只给英文名的 HD / MAI 系列则用「拼音段 · 系列」，不做人肉翻译。
+ */
+(function (root, factory) {
+  if (typeof module === "object" && module.exports) module.exports = factory(require("./voices-data.js"));
+  else root.Voices = factory(root.AzureVoicesData);
+})(typeof self !== "undefined" ? self : this, function (DATA) {
+  "use strict";
+
+  var ALL = (DATA && DATA.voices) || [];
+
+  /* --------------------------------------------------- 情感风格中文名 */
+
+  var STYLE_CN = {
+    "general": "通用", "calm": "平静", "cheerful": "愉快", "sad": "悲伤",
+    "angry": "愤怒", "fearful": "恐惧", "disgruntled": "不满", "serious": "严肃",
+    "depressed": "沮丧", "documentary-narration": "纪录片旁白", "newscast": "新闻播报",
+    "assistant": "智能助手", "chat": "闲聊", "chat-casual": "随意聊天",
+    "customerservice": "客服", "affectionate": "亲切", "gentle": "温和",
+    "lyrical": "抒情", "poetry-reading": "诗歌朗诵", "friendly": "友好",
+    "whispering": "耳语", "excited": "兴奋", "embarrassed": "尴尬",
+    "empathetic": "共情", "encouraging": "鼓励", "hopeful": "充满希望",
+    "sports-commentary": "体育解说", "sports-commentary-excited": "体育解说（激昂）",
+    "narrative": "叙事", "story-telling": "讲故事", "sorry": "道歉",
+    "comforting": "安慰", "anxious": "焦虑", "curious": "好奇",
+    "surprised": "惊讶", "sentimental": "感伤", "tired": "疲惫",
+    "strict": "严厉", "shy": "害羞", "disappointed": "失望", "guilty": "愧疚",
+    "lonely": "孤独", "debating": "辩论", "voice-assistant": "语音助手",
+    "customer-service": "客服", "angry-refusing": "愤怒拒绝",
+  };
+
+  function styleLabel(s) {
+    return STYLE_CN[s] ? STYLE_CN[s] + " (" + s + ")" : s;
+  }
+
+  /* --------------------------------------------------------- 推荐排序 */
+
+  // 用户点名要的云泽置顶，其后是常用音色
+  var PINNED = [
+    "zh-CN-YunzeNeural",
+    "zh-CN-XiaoxiaoNeural",
+    "zh-CN-YunxiNeural",
+    "zh-CN-XiaoyiNeural",
+    "zh-CN-YunjianNeural",
+    "zh-CN-YunyangNeural",
+    "zh-CN-Xiaoxiao:DragonHDFlashLatestNeural",
+    "zh-CN-Yunhan:DragonHDFlashLatestNeural",
+  ];
+
+  /* ------------------------------------------------------------- 分类 */
+
+  var GROUPS = [
+    { id: "pinned", name: "推荐" },
+    { id: "cn", name: "普通话" },
+    { id: "dialect", name: "方言" },
+    { id: "hmt", name: "港澳台" },
+    { id: "multi", name: "多语言" },
+    { id: "hd", name: "高清 HD / 新模型" },
+    { id: "all", name: "全部语言" },
+  ];
+
+  function isMulti(v) { return /多语言|Multilingual/.test(v.n + v.dn); }
+  function isDialect(v) { return v.l.indexOf("zh-CN-") === 0; }
+  function isHMT(v) { return v.l === "zh-HK" || v.l === "zh-TW"; }
+  function isHD(v) { return !!v.s; }
+
+  function match(v, group) {
+    switch (group) {
+      case "pinned": return PINNED.indexOf(v.n) >= 0;
+      case "cn": return v.l === "zh-CN";
+      case "dialect": return isDialect(v);
+      case "hmt": return isHMT(v);
+      case "multi": return isMulti(v);
+      case "hd": return isHD(v);
+      default: return true;
+    }
+  }
+
+  /** 列出某分组下的音色（已排序） */
+  function list(group, query, limit, offset) {
+    var q = (query || "").trim().toLowerCase();
+    var out = [];
+    for (var i = 0; i < ALL.length; i++) {
+      var v = ALL[i];
+      if (!match(v, group || "pinned")) continue;
+      if (q) {
+        var hay = (v.n + " " + v.dn + " " + v.l).toLowerCase();
+        if (hay.indexOf(q) < 0) continue;
+      }
+      out.push(v);
+    }
+    out.sort(function (a, b) {
+      var pa = PINNED.indexOf(a.n), pb = PINNED.indexOf(b.n);
+      if (pa >= 0 || pb >= 0) {
+        if (pa < 0) return 1;
+        if (pb < 0) return -1;
+        return pa - pb;
+      }
+      var za = a.l.indexOf("zh") === 0 ? 0 : 1;
+      var zb = b.l.indexOf("zh") === 0 ? 0 : 1;
+      if (za !== zb) return za - zb;
+      if (a.l !== b.l) return a.l < b.l ? -1 : 1;
+      return a.dn < b.dn ? -1 : a.dn > b.dn ? 1 : 0;
+    });
+    if (offset || limit) return out.slice(offset || 0, (offset || 0) + (limit || out.length));
+    return out;
+  }
+
+  function count(group) {
+    var n = 0;
+    for (var i = 0; i < ALL.length; i++) if (match(ALL[i], group)) n++;
+    return n;
+  }
+
+  function find(shortName) {
+    for (var i = 0; i < ALL.length; i++) if (ALL[i].n === shortName) return ALL[i];
+    return null;
+  }
+
+  /** 中文音色数（含方言 / 港澳台） */
+  function zhCount() {
+    var n = 0;
+    for (var i = 0; i < ALL.length; i++) if (ALL[i].l.indexOf("zh") === 0) n++;
+    return n;
+  }
+
+  /** 合成时实际使用的 locale（个别音色 locale 只有 "zh"，做兜底） */
+  function localeFor(v) {
+    if (!v) return "zh-CN";
+    return v.l && v.l.indexOf("-") > 0 ? v.l : "zh-CN";
+  }
+
+  /** 把服务端返回的原始清单转成本地结构，用于在线刷新 */
+  function fromServer(rawList) {
+    return (rawList || []).map(function (v) {
+      var sn = v.ShortName;
+      var series = "";
+      if (sn.indexOf(":") >= 0) {
+        series = sn.split(":")[1].replace(/Neural$/, "").replace(/Latest$/, "")
+          .replace("DragonHD", "Dragon HD ").replace("Dragon", "Dragon ").trim();
+      }
+      return {
+        n: sn,
+        dn: v.LocalName || v.DisplayName || sn,
+        g: (v.Gender || "F").charAt(0),
+        l: v.Locale || "",
+        s: series,
+        st: v.StyleList || [],
+        p: (v.VoiceTag && v.VoiceTag.VoicePersonalities) || [],
+      };
+    });
+  }
+
+  function replaceAll(newList) {
+    if (newList && newList.length) ALL = newList;
+  }
+
+  return {
+    GROUPS: GROUPS,
+    all: function () { return ALL; },
+    list: list,
+    count: count,
+    find: find,
+    zhCount: zhCount,
+    localeFor: localeFor,
+    styleLabel: styleLabel,
+    STYLE_CN: STYLE_CN,
+    fromServer: fromServer,
+    replaceAll: replaceAll,
+    total: function () { return ALL.length; },
+    generatedAt: (DATA && DATA.generatedAt) || "",
+  };
+});
+
+/* ==================== engine.js ==================== */
+/**
+ * engine.js —— 合成调度
+ *
+ * 切分 → 并发合成 → 帧级拼接。不限文字量的关键在这里：
+ * 块与块之间相互独立，任何长度的文本都只是"多一点块"，不改变单次请求的大小。
+ */
+(function (root, factory) {
+  if (typeof module === "object" && module.exports) {
+    module.exports = factory(require("./azure.js"), require("./mp3.js"), require("./split.js"));
+  } else {
+    root.TtsEngine = factory(root.AzureChannel, root.Mp3Tool, root.TextSplit);
+  }
+})(typeof self !== "undefined" ? self : this, function (Azure, Mp3, TextSplit) {
+  "use strict";
+
+  var state = {
+    running: false,
+    cancelled: false,
+    done: 0,
+    total: 0,
+    phase: "idle",
+  };
+
+  function snap() {
+    return {
+      running: state.running, phase: state.phase,
+      done: state.done, total: state.total,
+      percent: state.total ? Math.round((state.done / state.total) * 100) : 0,
+    };
+  }
+
+  /** 固定并发度的任务池，保证结果按原顺序返回 */
+  async function pool(size, count, worker) {
+    var next = 0;
+    var runners = [];
+    for (var i = 0; i < Math.min(size, count); i++) {
+      runners.push((async function () {
+        while (true) {
+          if (state.cancelled) return;
+          var idx = next++;
+          if (idx >= count) return;
+          await worker(idx);
+        }
+      })());
+    }
+    await Promise.all(runners);
+  }
+
+  /**
+   * 合成长文本。
+   * @param {object} opts
+   *   text, voice, locale, style, rate, pitch, volume,
+   *   maxChars, concurrency, onProgress
+   * @returns {Promise<{bytes:Uint8Array, frames:number, seconds:number, chunks:number, format:string}>}
+   */
+  async function run(opts) {
+    var o = opts || {};
+    var chunks = TextSplit.split(o.text, { maxChars: o.maxChars || 800 });
+    if (!chunks.length) throw new Error("没有可合成的内容，请先输入文字");
+
+    state.running = true;
+    state.cancelled = false;
+    state.done = 0;
+    state.total = chunks.length;
+    state.phase = "synthesizing";
+    var onProgress = o.onProgress || function () {};
+
+    var parts = new Array(chunks.length);
+    var failures = [];
+
+    var voiceOpts = {
+      voice: o.voice, locale: o.locale, style: o.style,
+      rate: o.rate, pitch: o.pitch, volume: o.volume,
+    };
+
+    function report(extra) {
+      var s = snap();
+      s.chunkChars = chunks.length;
+      if (extra) for (var k in extra) s[k] = extra[k];
+      onProgress(s);
+    }
+    report();
+
+    try {
+      await pool(Math.max(1, Math.min(o.concurrency || 3, 6)), chunks.length, async function (idx) {
+        if (state.cancelled) return;
+        var lastErr = null;
+        for (var t = 0; t < 2; t++) { // engine 层再兜两轮
+          try {
+            parts[idx] = await Azure.synthesize(chunks[idx], voiceOpts);
+            lastErr = null;
+            break;
+          } catch (e) {
+            lastErr = e;
+            if (state.cancelled) return;
+            if (t === 0) await new Promise(function (r) { setTimeout(r, 600); });
+          }
+        }
+        if (lastErr) {
+          failures.push({
+            index: idx,
+            total: chunks.length,
+            preview: chunks[idx].slice(0, 40).replace(/\n/g, " "),
+            message: lastErr.message,
+          });
+          // 失败也要计入进度，否则进度条会永远卡住
+          state.done++;
+          report({ lastError: lastErr.message });
+          return;
+        }
+        state.done++;
+        report();
+      });
+
+      if (state.cancelled) throw new Error("已取消");
+
+      if (failures.length) {
+        var f = failures.sort(function (a, b) { return a.index - b.index; })[0];
+        var tail = failures.length > 1 ? "（共 " + failures.length + " 个片段失败）" : "";
+        var err = new Error(
+          "第 " + (f.index + 1) + "/" + f.total + " 段合成失败" + tail + "：" + f.message +
+          "\n失败片段开头：「" + f.preview + "…」"
+        );
+        err.failures = failures;
+        throw err;
+      }
+
+      state.phase = "joining";
+      report();
+      var joined = Mp3.concat(parts.filter(function (p) { return p && p.length; }));
+      if (!joined.frames) throw new Error("合成结果为空，请检查音色是否可用");
+
+      state.phase = "done";
+      state.running = false;
+      report();
+      return {
+        bytes: joined.bytes,
+        frames: joined.frames,
+        seconds: Mp3.durationSec(joined.frames, true),
+        chunks: chunks.length,
+        format: Mp3.describe(joined.info),
+        skipped: joined.skipped.length,
+        chunkList: chunks,
+      };
+    } catch (e) {
+      state.running = false;
+      state.phase = "error";
+      report({ lastError: e.message });
+      throw e;
+    }
+  }
+
+  /** 试听：只合成开头一小段，快速确认音色与风格 */
+  async function preview(opts) {
+    var o = opts || {};
+    var text = String(o.text || "").trim();
+    if (!text) throw new Error("请先输入文字");
+    var head = TextSplit.split(text, { maxChars: o.previewChars || 60 })[0] || text.slice(0, 60);
+    var bytes = await Azure.synthesize(head, {
+      voice: o.voice, locale: o.locale, style: o.style,
+      rate: o.rate, pitch: o.pitch, volume: o.volume,
+    });
+    var r = Mp3.toFrames(bytes);
+    return {
+      bytes: r.bytes, frames: r.frames,
+      seconds: Mp3.durationSec(r.frames, true),
+      format: Mp3.describe(r.info),
+      text: head,
+    };
+  }
+
+  function cancel() {
+    if (state.running) {
+      state.cancelled = true;
+      state.phase = "cancelled";
+    }
+  }
+
+  /** 只换 token，测通道连通性 */
+  async function checkChannel() {
+    var t0 = Date.now();
+    var cred = await Azure.getToken(true);
+    return { region: cred.region, ms: Date.now() - t0, expMs: cred.expMs };
+  }
+
+  return { run: run, preview: preview, cancel: cancel, state: snap, checkChannel: checkChannel };
+});
+
+/* ==================== ui.js ==================== */
+/**
+ * ui.js —— 界面逻辑
+ *
+ * 只负责"读界面、调引擎、写界面"，不包含任何合成细节。
+ */
+(function () {
+  "use strict";
+
+  var $ = function (id) { return document.getElementById(id); };
+  var PAGE_SIZE = 40;
+  var SAMPLE = [
+    "云泽的嗓音偏低，语速不快，适合念那种需要人安静听下去的东西。",
+    "这一句你可以拿来对比：同样的字，换一个音色，语气就完全变了。",
+    "上方的文本框没有字数限制。你把一整本书贴进去也行 —— 工具会先把文字按段落和句子切开，几段同时合成，最后按音频帧边界拼成一整条 MP3，中间不会有断裂感。",
+    "试试把语速调慢一点，再选一个纪录片旁白的风格，会有惊喜。"
+  ].join("\n\n");
+
+  var st = {
+    group: "pinned",
+    query: "",
+    page: 1,
+    voice: "zh-CN-YunzeNeural",
+    result: null,
+    blobUrl: null,
+    running: false,
+    timer: null,
+  };
+
+  /* ------------------------------------------------------------ 工具 */
+
+  function el(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    return n;
+  }
+
+  function alertBox(msg, kind) {
+    var a = $("alert");
+    if (!msg) { a.style.display = "none"; return; }
+    a.className = "alert" + (kind ? " " + kind : "");
+    a.textContent = msg;
+    a.style.display = "";
+  }
+
+  function fmtSize(bytes) {
+    if (bytes < 1024) return bytes + " B";
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(0) + " KB";
+    return (bytes / 1024 / 1024).toFixed(1) + " MB";
+  }
+
+  function chunkSize() { return Number($("chunkSize").value) || 800; }
+
+  function groupName(id) {
+    for (var i = 0; i < Voices.GROUPS.length; i++) {
+      if (Voices.GROUPS[i].id === id) return Voices.GROUPS[i].name;
+    }
+    return id;
+  }
+
+  function savePrefs() {
+    try {
+      localStorage.setItem("tts-azure-prefs", JSON.stringify({
+        voice: st.voice,
+        style: $("style").value,
+        rate: $("rate").value,
+        pitch: $("pitch").value,
+        volume: $("volume").value,
+        chunkSize: $("chunkSize").value,
+        concurrency: $("concurrency").value,
+      }));
+    } catch (e) { /* 隐私模式下忽略 */ }
+  }
+
+  function loadPrefs() {
+    try {
+      var raw = localStorage.getItem("tts-azure-prefs");
+      if (!raw) return null;
+      return JSON.parse(raw);
+    } catch (e) { return null; }
+  }
+
+  /* -------------------------------------------------------- 音色列表 */
+
+  function voiceMeta(v) {
+    var bits = [];
+    bits.push(v.g === "M" ? "男声" : v.g === "F" ? "女声" : "中性");
+    bits.push(v.l);
+    if (v.s) bits.push(v.s);
+    if (v.st && v.st.length) bits.push(v.st.length + " 种风格");
+    return bits.join(" · ");
+  }
+
+  function renderTabs() {
+    var box = $("voiceTabs");
+    box.textContent = "";
+    Voices.GROUPS.forEach(function (g) {
+      var n = Voices.count(g.id);
+      var b = el("button", "tab" + (st.group === g.id ? " on" : ""));
+      b.appendChild(document.createTextNode(g.name));
+      var cnt = el("span", "n", n);
+      b.appendChild(cnt);
+      b.onclick = function () {
+        st.group = g.id;
+        st.page = 1;
+        renderTabs();
+        renderVoices();
+      };
+      box.appendChild(b);
+    });
+  }
+
+  function renderVoices() {
+    var all = Voices.list(st.group, st.query);
+    var shown = all.slice(0, st.page * PAGE_SIZE);
+    var list = $("voiceList");
+    list.textContent = "";
+
+    $("voiceListCount").textContent = all.length + " 个";
+
+    if (!all.length) {
+      list.appendChild(el("div", "empty",
+        st.query ? "「" + st.query + "」在「" + groupName(st.group) + "」里没有匹配，换个分组或清空搜索" : "这个分组暂时没有音色"));
+    } else {
+      shown.forEach(function (v) {
+        var b = el("button", "voice" + (v.n === st.voice ? " on" : ""));
+        b.dataset.n = v.n;
+        var nameBox = el("span", "vname");
+        if (v.n.indexOf("zh-CN-Yunze") === 0) nameBox.appendChild(el("span", "star", "★"));
+        nameBox.appendChild(document.createTextNode(v.dn));
+        b.appendChild(nameBox);
+        b.appendChild(el("span", "vmeta", voiceMeta(v)));
+        b.onclick = function () { selectVoice(v.n); };
+        list.appendChild(b);
+      });
+    }
+
+    var more = $("btnMore");
+    var rest = all.length - shown.length;
+    if (rest > 0) {
+      more.style.display = "";
+      more.textContent = "显示更多（还有 " + rest + " 个）";
+    } else {
+      more.style.display = all.length > PAGE_SIZE ? "" : "none";
+      more.textContent = all.length > PAGE_SIZE ? "已显示全部 " + all.length + " 个" : "显示更多";
+      if (all.length <= PAGE_SIZE) more.style.display = "none";
+    }
+  }
+
+  function selectVoice(name) {
+    st.voice = name;
+    var v = Voices.find(name);
+    if (!v) return;
+    $("curVoice").textContent = v.dn + " · " + voiceMeta(v);
+    fillStyles(v);
+
+    var items = $("voiceList").children;
+    for (var i = 0; i < items.length; i++) {
+      items[i].classList.toggle("on", items[i].dataset.n === name);
+    }
+    savePrefs();
+  }
+
+  function fillStyles(v) {
+    var sel = $("style");
+    var keep = sel.value;
+    sel.textContent = "";
+    var o0 = el("option", null, "默认（不带风格）");
+    o0.value = "";
+    sel.appendChild(o0);
+    (v.st || []).forEach(function (s) {
+      var o = el("option", null, Voices.styleLabel(s));
+      o.value = s;
+      sel.appendChild(o);
+    });
+    if (keep && (v.st || []).indexOf(keep) >= 0) sel.value = keep;
+    $("styleCount").textContent = (v.st && v.st.length)
+      ? "（" + v.st.length + " 种）"
+      : "（此音色不支持风格）";
+    sel.disabled = !(v.st && v.st.length);
+    if (!v.st || !v.st.length) sel.value = "";
+  }
+
+  /* ------------------------------------------------------------ 统计 */
+
+  function updateStats() {
+    var text = $("text").value;
+    var s = TextSplit.stats(text, { maxChars: chunkSize() });
+    // 预估要跟着语速走：设了 -20% 就是把时长拉长 1.25 倍
+    var rate = Number($("rate").value) || 0;
+    var factor = 1 / (1 + rate / 100);
+    var seconds = s.seconds * factor;
+    var bytes = s.bytesEstimate * factor;
+
+    $("sChars").textContent = s.chars.toLocaleString("zh-CN");
+    $("sChunks").textContent = s.chunks;
+    $("sTime").textContent = Mp3Tool.formatTime(seconds);
+    $("sSize").textContent = fmtSize(bytes);
+
+    var hint = $("sHint");
+    if (s.chars === 0) {
+      hint.textContent = "";
+    } else if (bytes > 80 * 1024 * 1024) {
+      hint.textContent = "篇幅很大，成品约 " + fmtSize(bytes) + "，请留意内存";
+      hint.className = "hint";
+    } else {
+      hint.textContent = "不限字数";
+      hint.className = "hint good";
+    }
+  }
+
+  function scheduleStats() {
+    clearTimeout(st.timer);
+    st.timer = setTimeout(updateStats, 180);
+  }
+
+  /* -------------------------------------------------------- 合成流程 */
+
+  function setRunning(on) {
+    st.running = on;
+    $("btnStart").disabled = on;
+    $("btnPreview").disabled = on;
+    $("btnCancel").style.display = on ? "" : "none";
+    $("progressWrap").style.display = on ? "" : "none";
+    $("btnStart").textContent = on ? "合成中…" : "开始合成";
+  }
+
+  function setProgress(p) {
+    $("progressBar").style.width = (p.percent || 0) + "%";
+    var phase = {
+      synthesizing: "正在合成语音",
+      joining: "正在拼接音频",
+      done: "完成",
+      error: "出错",
+      cancelled: "已取消",
+      idle: "准备中",
+    }[p.phase] || p.phase;
+    $("progressPhase").textContent = phase + (p.total ? "（" + p.done + "/" + p.total + " 段）" : "");
+    $("progressText").textContent = (p.percent || 0) + "%";
+  }
+
+  function opts() {
+    var v = Voices.find(st.voice);
+    return {
+      text: $("text").value,
+      voice: st.voice,
+      locale: Voices.localeFor(v),
+      style: $("style").value || "",
+      rate: Number($("rate").value),
+      pitch: Number($("pitch").value),
+      volume: Number($("volume").value),
+      maxChars: chunkSize(),
+      concurrency: Number($("concurrency").value),
+    };
+  }
+
+  async function doPreview() {
+    var o = opts();
+    if (!o.text.trim()) o.text = SAMPLE;
+    alertBox("");
+    setRunning(true);
+    setProgress({ phase: "synthesizing", percent: 0, done: 0, total: 1 });
+    try {
+      var r = await TtsEngine.preview(o);
+      playBytes(r.bytes);
+      alertBox("试听片段：" + r.format + " · " + r.seconds.toFixed(1) + " 秒\n「" + r.text.slice(0, 50) + "…」", "info");
+      setProgress({ phase: "done", percent: 100, done: 1, total: 1 });
+    } catch (e) {
+      alertBox(e.message);
+    } finally {
+      setRunning(false);
+    }
+  }
+
+  async function doStart() {
+    var o = opts();
+    if (!o.text.trim()) { alertBox("请先输入要转换的文字。"); $("text").focus(); return; }
+    alertBox("");
+    st.result = null;
+    setRunning(true);
+    setProgress({ phase: "synthesizing", percent: 0, done: 0, total: 1 });
+    var t0 = Date.now();
+    try {
+      var r = await TtsEngine.run({
+        text: o.text, voice: o.voice, locale: o.locale, style: o.style,
+        rate: o.rate, pitch: o.pitch, volume: o.volume,
+        maxChars: o.maxChars, concurrency: o.concurrency,
+        onProgress: setProgress,
+      });
+      st.result = r;
+      showResult(r, Date.now() - t0, o);
+      alertBox("合成完成：" + r.chunks + " 段，用时 " + ((Date.now() - t0) / 1000).toFixed(1) + " 秒。", "good");
+    } catch (e) {
+      alertBox(e.message);
+      setProgress({ phase: "error", percent: 0, done: 0, total: 0 });
+    } finally {
+      setRunning(false);
+    }
+  }
+
+  function showResult(r, ms, o) {
+    var v = Voices.find(o.voice) || { dn: o.voice };
+    var bytes = r.bytes;
+    var blob = new Blob([bytes], { type: "audio/mpeg" });
+    if (st.blobUrl) URL.revokeObjectURL(st.blobUrl);
+    st.blobUrl = URL.createObjectURL(blob);
+
+    var a = $("audio");
+    a.src = st.blobUrl;
+
+    $("resultCard").style.display = "";
+    $("resultFormat").textContent = r.format;
+    var info = $("resultInfo");
+    info.textContent = "";
+    [
+      ["时长", Mp3Tool.formatTime(r.seconds)],
+      ["大小", fmtSize(bytes.length)],
+      ["音频帧", r.frames.toLocaleString("zh-CN")],
+      ["分段", r.chunks + " 段"],
+      ["耗时", (ms / 1000).toFixed(1) + " 秒"],
+      ["字数", TextSplit.stats(o.text).chars.toLocaleString("zh-CN")],
+    ].forEach(function (kv) {
+      var s = el("span");
+      s.appendChild(document.createTextNode(kv[0] + " "));
+      s.appendChild(el("b", null, kv[1]));
+      info.appendChild(s);
+    });
+
+    var d = new Date();
+    var pad = function (n) { return n < 10 ? "0" + n : "" + n; };
+    var fname = v.dn.replace(/[\\/:*?"<>|·]/g, "").trim() +
+      "_" + d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) +
+      "_" + pad(d.getHours()) + pad(d.getMinutes()) + pad(d.getSeconds()) + ".mp3";
+    $("fileName").textContent = fname;
+    st.fileName = fname;
+  }
+
+  function playBytes(bytes) {
+    var blob = new Blob([bytes], { type: "audio/mpeg" });
+    var url = URL.createObjectURL(blob);
+    var a = $("audio");
+    a.src = url;
+    $("resultCard").style.display = "";
+    $("resultFormat").textContent = "试听片段";
+    a.play().catch(function () { /* 用户手势限制 */ });
+    setTimeout(function () { URL.revokeObjectURL(url); }, 120000);
+  }
+
+  function doDownload() {
+    if (!st.result) { alertBox("还没有成品可下载。"); return; }
+    var blob = new Blob([st.result.bytes], { type: "audio/mpeg" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = st.fileName || "speech.mp3";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 30000);
+  }
+
+  /* -------------------------------------------------------- 通道检测 */
+
+  async function checkChannel() {
+    var box = $("channel");
+    box.className = "channel busy";
+    $("channelText").textContent = "检测通道…";
+    try {
+      var r = await TtsEngine.checkChannel();
+      box.className = "channel ok";
+      $("channelText").textContent = "通道正常 · " + r.region + " · " + r.ms + "ms";
+      return true;
+    } catch (e) {
+      box.className = "channel err";
+      $("channelText").textContent = "通道不可用";
+      alertBox("语音通道连接失败：" + e.message +
+        "\n\n请检查网络（需能访问微软语音服务）。");
+      return false;
+    }
+  }
+
+  /* ------------------------------------------------------------ 绑定 */
+
+  function bindRange(id, valId, fmt) {
+    var r = $(id), out = $(valId);
+    var sync = function () { out.textContent = fmt(r.value); };
+    r.addEventListener("input", function () { sync(); savePrefs(); });
+    sync();
+  }
+
+  function init() {
+    // 顶部统计
+    $("statVoices").textContent = Voices.total();
+    $("statZh").textContent = Voices.zhCount();
+
+    // 恢复偏好
+    var p = loadPrefs();
+    if (p) {
+      if (p.voice && Voices.find(p.voice)) st.voice = p.voice;
+      if (p.rate) $("rate").value = p.rate;
+      if (p.pitch) $("pitch").value = p.pitch;
+      if (p.volume) $("volume").value = p.volume;
+      if (p.chunkSize) $("chunkSize").value = p.chunkSize;
+      if (p.concurrency) $("concurrency").value = p.concurrency;
+    }
+
+    bindRange("rate", "rateVal", function (v) { return (v > 0 ? "+" : "") + v + "%"; });
+    bindRange("pitch", "pitchVal", function (v) { return (v > 0 ? "+" : "") + v + "Hz"; });
+    bindRange("volume", "volumeVal", function (v) { return (v > 0 ? "+" : "") + v + "%"; });
+    bindRange("chunkSize", "chunkVal", function (v) { return v + " 字"; });
+    bindRange("concurrency", "concVal", function (v) { return v; });
+
+    renderTabs();
+    renderVoices();
+    selectVoice(st.voice);
+    if (p && p.style) {
+      setTimeout(function () {
+        if ([].indexOf.call($("style").options, $("style").querySelector("[value='" + p.style + "']")) >= 0) {
+          $("style").value = p.style;
+        }
+      }, 0);
+    }
+
+    // 事件
+    $("voiceSearch").addEventListener("input", function (e) {
+      st.query = e.target.value;
+      st.page = 1;
+      renderVoices();
+    });
+    $("btnMore").addEventListener("click", function () {
+      st.page++;
+      renderVoices();
+    });
+    $("style").addEventListener("change", savePrefs);
+    $("text").addEventListener("input", scheduleStats);
+    $("rate").addEventListener("input", scheduleStats); // 语速变了，预估时长跟着变
+    $("chunkSize").addEventListener("input", scheduleStats);
+
+    $("btnPaste").addEventListener("click", async function () {
+      try {
+        var t = await navigator.clipboard.readText();
+        if (t) { $("text").value = t; updateStats(); }
+        else alertBox("剪贴板是空的。", "info");
+      } catch (e) {
+        alertBox("浏览器不允许直接读剪贴板，请手动 Ctrl+V 粘贴。", "info");
+      }
+    });
+    $("btnClear").addEventListener("click", function () {
+      $("text").value = "";
+      updateStats();
+      $("text").focus();
+    });
+    $("btnSample").addEventListener("click", function () {
+      $("text").value = SAMPLE;
+      updateStats();
+    });
+
+    $("btnPreview").addEventListener("click", doPreview);
+    $("btnStart").addEventListener("click", doStart);
+    $("btnCancel").addEventListener("click", function () {
+      TtsEngine.cancel();
+      alertBox("已取消。", "info");
+    });
+    $("btnDownload").addEventListener("click", doDownload);
+
+    updateStats();
+    checkChannel();
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init);
+  } else {
+    init();
+  }
+
+  // 供自检使用
+  window.__ui = { state: st, opts: opts, updateStats: updateStats, checkChannel: checkChannel };
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="不限字数的文字转 MP3 工具，内置 958 种语音（含云泽、晓晓、云希等），纯前端、免安装。">
+<title>文字转 MP3 · 不限字数 · 含云泽</title>
+<style>/*__CSS__*/</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <!-- ======================= 顶栏 ======================= -->
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo">泽</div>
+      <div class="brand-text">
+        <h1>文字转 MP3</h1>
+        <p>不限字数 · 内置 <b id="statVoices">—</b> 种语音 · 中文 <b id="statZh">—</b> 种，含云泽</p>
+      </div>
+    </div>
+    <div class="channel" id="channel" title="语音通道状态">
+      <span class="dot" id="channelDot"></span>
+      <span id="channelText">检测中…</span>
+    </div>
+  </header>
+
+  <!-- ======================= 主区 ======================= -->
+  <div class="grid">
+
+    <!-- 文本 -->
+    <section class="panel editor">
+      <div class="phead">
+        <h2>文本</h2>
+        <div class="phead-tools">
+          <button class="btn ghost sm" id="btnPaste">读取剪贴板</button>
+          <button class="btn ghost sm" id="btnSample">示例</button>
+          <button class="btn ghost sm" id="btnClear">清空</button>
+        </div>
+      </div>
+      <textarea id="text" spellcheck="false"
+        placeholder="把要转成语音的文字贴进来，多少字都行 ——&#10;一万字、十万字都可以，工具会自动分段、并行合成、再无缝拼成一整条 MP3。"></textarea>
+      <div class="stats">
+        <span><b id="sChars">0</b> 字</span>
+        <span><b id="sChunks">0</b> 段</span>
+        <span>约 <b id="sTime">0:00</b></span>
+        <span>约 <b id="sSize">0 KB</b></span>
+        <span class="hint" id="sHint"></span>
+      </div>
+    </section>
+
+    <!-- 音色 -->
+    <aside class="panel voices">
+      <div class="phead">
+        <h2>音色</h2>
+        <span class="pill" id="voiceListCount">—</span>
+      </div>
+      <input class="input" id="voiceSearch" placeholder="搜索：云泽 / 晓晓 / yunze / 东北">
+      <div class="tabs" id="voiceTabs"></div>
+      <div class="voicelist" id="voiceList"></div>
+      <button class="btn ghost block" id="btnMore">显示更多</button>
+    </aside>
+
+  </div>
+
+  <!-- ======================= 参数 + 操作 ======================= -->
+  <section class="panel controls">
+    <div class="phead">
+      <h2>参数</h2>
+      <span class="pill" id="curVoice">云泽 · 男声 · zh-CN</span>
+    </div>
+
+    <div class="ctrls">
+
+      <label class="field">
+        <span>语速 <b id="rateVal">0%</b></span>
+        <input type="range" id="rate" min="-50" max="100" step="5" value="0">
+      </label>
+
+      <label class="field">
+        <span>音调 <b id="pitchVal">0Hz</b></span>
+        <input type="range" id="pitch" min="-50" max="50" step="5" value="0">
+      </label>
+
+      <label class="field">
+        <span>音量 <b id="volumeVal">0%</b></span>
+        <input type="range" id="volume" min="-50" max="50" step="5" value="0">
+      </label>
+
+      <label class="field">
+        <span>情感风格 <b id="styleCount"></b></span>
+        <select class="input" id="style"><option value="">默认（不带风格）</option></select>
+      </label>
+
+      <details class="advanced">
+        <summary>高级设置</summary>
+        <div class="adv-body">
+          <label class="field">
+            <span>每段字数 <b id="chunkVal">800</b></span>
+            <input type="range" id="chunkSize" min="200" max="2000" step="100" value="800">
+          </label>
+          <label class="field">
+            <span>并发数 <b id="concVal">3</b></span>
+            <input type="range" id="concurrency" min="1" max="6" step="1" value="3">
+          </label>
+        </div>
+      </details>
+
+    </div>
+
+    <div class="actions">
+      <button class="btn" id="btnPreview">试听音色</button>
+      <button class="btn primary" id="btnStart">开始合成</button>
+      <button class="btn danger" id="btnCancel" style="display:none">取消</button>
+    </div>
+
+    <div class="progress" id="progressWrap" style="display:none">
+      <div class="bar"><div class="fill" id="progressBar"></div></div>
+      <div class="ptext"><span id="progressPhase">准备中</span><span id="progressText">0%</span></div>
+    </div>
+
+    <div class="alert" id="alert" style="display:none"></div>
+  </section>
+
+  <!-- ======================= 结果 ======================= -->
+  <section class="panel result" id="resultCard" style="display:none">
+    <div class="phead">
+      <h2>成品</h2>
+      <span class="pill" id="resultFormat"></span>
+    </div>
+    <audio id="audio" controls></audio>
+    <div class="result-meta" id="resultInfo"></div>
+    <div class="actions">
+      <button class="btn primary" id="btnDownload">下载 MP3</button>
+      <span class="filename" id="fileName"></span>
+    </div>
+  </section>
+
+  <!-- ======================= 说明 ======================= -->
+  <footer class="foot">
+    <p><b>它是怎么做到"不限字数"的？</b> 文字会先按段落和句子切成小段，几段并行合成，再把音频按帧边界无缝拼成一条。所以一万字和一百字走的是同一套流程，只是段数不同 —— 不存在"字数上限"这回事。</p>
+    <p><b>通道说明：</b>本工具走的是微软公开的语音合成通道，无需注册、无需密钥、不消耗你的任何额度，也不上传文字到第三方服务器。它是公开接口而非微软官方授权入口，可能随时失效；若要用于商业交付，建议改用 Azure 官方语音服务（正式 API + 你自己的密钥）。请勿用于违法或侵权用途。</p>
+    <p class="dim">纯前端实现 · 双击即用 · 可离线保存后使用（联网即可合成）</p>
+  </footer>
+
+</div>
+
+<script>/*__JS__*/</script>
+</body>
+</html>

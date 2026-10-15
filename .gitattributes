@@ -1,0 +1,6 @@
+# 统一换行，避免不同系统上 diff 飘忽
+* text=auto eol=lf
+
+# 音频样本与截图是二进制
+*.mp3 binary
+*.png binary

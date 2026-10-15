@@ -1,0 +1,54 @@
+{
+  "sign": [
+    {
+      "url": "https://dev.microsofttranslator.com/apps/endpoint?api-version=1.0",
+      "nowMs": 1792060800000,
+      "uuid": "0123456789abcdef0123456789abcdef",
+      "date": "Thu, 15 Oct 2026 10:40:00 GMT",
+      "expect": "MSTranslatorAndroidApp::Z0bqFgErQP/iEDOfgwVF6/Af0zP7OiK2AXaKS4a82oA=::Thu, 15 Oct 2026 10:40:00 GMT::0123456789abcdef0123456789abcdef"
+    },
+    {
+      "url": "https://dev.microsofttranslator.com/apps/endpoint?api-version=1.0",
+      "nowMs": 1792060800000,
+      "uuid": "ffffffffffffffffffffffffffffffff",
+      "date": "Thu, 15 Oct 2026 10:40:00 GMT",
+      "expect": "MSTranslatorAndroidApp::dXDq+eMP0j0JgSAvtLslGIPH/Aqm25yjw6ERyVqX/h4=::Thu, 15 Oct 2026 10:40:00 GMT::ffffffffffffffffffffffffffffffff"
+    },
+    {
+      "url": "https://dev.microsofttranslator.com/apps/endpoint?api-version=1.0",
+      "nowMs": 1000000000000,
+      "uuid": "abcdefabcdefabcdefabcdefabcdefab",
+      "date": "Sun, 09 Sep 2001 01:46:40 GMT",
+      "expect": "MSTranslatorAndroidApp::Lppu9gj6EpMANzgQW0F+EgAMBI3DX7O+auytne9+phQ=::Sun, 09 Sep 2001 01:46:40 GMT::abcdefabcdefabcdefabcdefabcdefab"
+    },
+    {
+      "url": "https://dev.microsofttranslator.com/apps/endpoint?api-version=1.0",
+      "nowMs": 2000000000000,
+      "uuid": "00000000000000000000000000000000",
+      "date": "Wed, 18 May 2033 03:33:20 GMT",
+      "expect": "MSTranslatorAndroidApp::aO834MONI5T6RJAiIBTq1FpRE0gsy3D9/G+y3H/YnLw=::Wed, 18 May 2033 03:33:20 GMT::00000000000000000000000000000000"
+    }
+  ],
+  "mp3": {
+    "fixtures": {
+      "part_a.mp3": {
+        "bytes": 25776,
+        "frames": 179,
+        "head": "fff364c4"
+      },
+      "part_b.mp3": {
+        "bytes": 19152,
+        "frames": 133,
+        "head": "fff364c4"
+      },
+      "part_c.mp3": {
+        "bytes": 18864,
+        "frames": 131,
+        "head": "fff364c4"
+      }
+    },
+    "expectedTotalFrames": 443,
+    "expectedSeconds": 10.632,
+    "expectedFrameBytes": 144
+  }
+}

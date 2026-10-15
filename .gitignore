@@ -1,0 +1,14 @@
+# 测试产物与临时文件（截图动辄数百 KB，不要进仓库）
+_verify/
+_scratch/
+*.log
+
+# Python
+__pycache__/
+*.pyc
+
+# 编辑器 / 系统
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
