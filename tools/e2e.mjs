@@ -348,6 +348,8 @@ async function main() {
     await ev("document.getElementById('btnStart').click()", false);
     await waitFor("document.getElementById('btnStart').disabled===false", 420, "超大文本合成");
     const hugeMs = Date.now() - t1;
+    // audio.duration 在元数据加载完之前是 NaN，而 NaN 经 CDP 序列化回来会变成 null
+    await waitFor("isFinite(document.getElementById('audio').duration) && document.getElementById('audio').duration > 0", 30, "成品元数据");
     const hr = await ev(`(function(){
       var info=document.getElementById('resultInfo').textContent;
       return {info:info, duration:document.getElementById('audio').duration,
@@ -363,7 +365,144 @@ async function main() {
       `超大文本时长匹配（预期 ~${hExpect.toFixed(0)}s，实际 ${hr.duration.toFixed(0)}s）`);
     ok(hugeMs < 120000, "耗时在合理范围（" + (hugeMs / 1000).toFixed(1) + " 秒，约 " + (hChars / (hugeMs / 1000)).toFixed(0) + " 字/秒）");
 
-    /* --------------------------------------------- 9. 无异常 */
+    /* --------------------------------------------- 9. 读取文件 */
+    console.log("\n── 读取文件（真实 File 对象走 change 事件）──");
+
+    // 工具条从 3 个按钮变成 4 个，先确认排版没挤坏
+    const toolBtns = await ev(`[].slice.call(document.querySelectorAll('.phead-tools .btn')).map(function(b){
+      var r = b.getBoundingClientRect();
+      return { text: b.textContent, x: r.x, y: r.y, w: r.width, h: r.height,
+               overflow: b.scrollWidth - b.clientWidth };
+    })`);
+    ok(toolBtns.length === 4, "文本工具条共 4 个按钮（含「读取文件」）");
+    ok(toolBtns.some((b) => b.text === "读取文件"), "「读取文件」按钮存在");
+    ok(toolBtns.every((b) => b.w > 0 && b.h > 0), "每个按钮都真实可见");
+    ok(toolBtns.every((b) => b.overflow <= 1), "按钮文字没有被裁掉");
+    let overlap = false;
+    for (const a of toolBtns) {
+      for (const b of toolBtns) {
+        if (a === b) continue;
+        if (Math.abs(a.y - b.y) < 2 && a.x < b.x + b.w - 1 && b.x < a.x + a.w - 1) overlap = true;
+      }
+    }
+    ok(!overlap, "工具条按钮之间没有重叠");
+
+    const fixtureB64 = (p) => fs.readFileSync(path.join(ROOT, "tests", "fixtures", p)).toString("base64");
+
+    // 在页面里把 base64 还原成真实 File，塞进 input 并派发 change —— 走的就是用户选文件那条路径
+    const putFiles = async (items) => ev(`(async function(){
+      var items = ${JSON.stringify(items)};
+      function u8(b64){ var bin = atob(b64); var a = new Uint8Array(bin.length);
+        for (var i = 0; i < bin.length; i++) a[i] = bin.charCodeAt(i); return a; }
+      var dt = new DataTransfer();
+      items.forEach(function(it){ dt.items.add(new File([u8(it.b64)], it.name, { type: it.type })); });
+      var inp = document.getElementById("fileInput");
+      inp.files = dt.files;
+      inp.dispatchEvent(new Event("change", { bubbles: true }));
+      return dt.files.length;
+    })()`);
+
+    await ev(`document.getElementById('btnClear').click()`);
+    await sleep(200);
+
+    const sent = await putFiles([
+      { b64: fixtureB64("sample_gbk.txt"), name: "GBK文稿.txt", type: "text/plain" },
+      { b64: fixtureB64("sample.docx"), name: "合同.docx", type: "" },
+    ]);
+    ok(sent === 2, "两个文件已通过 change 事件投递");
+
+    await waitFor("document.getElementById('btnFile').disabled===false && document.getElementById('text').value.length>0", 40, "文件读取完成");
+
+    const fr = await ev(`(function(){
+      var t = document.getElementById('text').value;
+      var a = document.getElementById('alert');
+      return {
+        text: t,
+        chars: document.getElementById('sChars').textContent,
+        chunks: document.getElementById('sChunks').textContent,
+        alert: a.textContent,
+        kind: a.className,
+        visible: a.offsetHeight > 0,
+        btn: document.getElementById('btnFile').textContent,
+        accept: document.getElementById('fileInput').getAttribute('accept')
+      };
+    })()`);
+
+    ok(fr.text.indexOf("这是一份用来测编码的文稿。") >= 0, "GBK 文本被正确解码读入（没有乱码）");
+    ok(fr.text.indexOf("\ufffd") < 0, "读入内容不含替换字符（编码判断正确）");
+    ok(fr.text.indexOf("第一段：这是 Word 文档里的正文。") >= 0, "docx 正文被读入");
+    ok(fr.text.indexOf("这段是修订删除的内容") < 0, "docx 的修订删除内容没有混进来");
+    ok(fr.text.indexOf("<w:") < 0, "docx 没有把 XML 标签带进来");
+    ok(/已读入 2 个文件/.test(fr.alert), "提示说明读入数量：" + fr.alert.split("\n")[0]);
+    ok(/GBK/.test(fr.alert), "提示标明识别到的编码");
+    ok(/Word 文档/.test(fr.alert), "提示标明文件类型");
+    ok(fr.visible && /good/.test(fr.kind), "读取结果提示真实可见且为成功态");
+    ok(fr.btn === "读取文件", "按钮文案正确");
+    ok(fr.accept.indexOf(".docx") >= 0, "accept 已与实际支持列表同步");
+    ok(Number(fr.chars.replace(/,/g, "")) > 0, "字数统计已刷新：" + fr.chars);
+    ok(Number(fr.chunks) >= 1, "分段统计已刷新：" + fr.chunks);
+
+    // 已有内容时应当是「追加」，不能把用户刚写的东西冲掉
+    const lenBefore = fr.text.length;
+    await putFiles([{ b64: fixtureB64("sample_utf8.txt"), name: "再读一份.txt", type: "text/plain" }]);
+    await waitFor("document.getElementById('btnFile').disabled===false", 40, "第二次读取");
+    await sleep(200);
+    const appended = await ev(`document.getElementById('text').value`);
+    ok(appended.length > lenBefore, "第二次读取是追加而不是覆盖");
+    ok((appended.match(/这是一份用来测编码的文稿。/g) || []).length === 2,
+      "原有内容仍在，且新内容只加了一次");
+    ok(appended.indexOf("合同") < 0, "文件名不会混进正文");
+
+    // 读不了的文件必须说人话，且不能往文本框塞垃圾
+    await ev(`document.getElementById('btnClear').click()`);
+    await sleep(150);
+    await putFiles([{ b64: fixtureB64("sample_utf8.txt"), name: "读不了的.pdf", type: "application/pdf" }]);
+    await waitFor("document.getElementById('btnFile').disabled===false", 40, "PDF 处理");
+    await sleep(200);
+    const bad = await ev(`(function(){
+      var a = document.getElementById('alert');
+      return { text: a.textContent, visible: a.offsetHeight > 0, box: document.getElementById('text').value };
+    })()`);
+    ok(bad.visible, "失败提示真实可见");
+    ok(/读不了/.test(bad.text), "PDF 给出明确失败原因");
+    ok(/另存为|复制/.test(bad.text), "PDF 提示里带了替代办法");
+    ok(bad.box === "", "失败时不会往文本框里塞东西");
+
+    // 拖拽路径：dragenter → 提示出现 → drop → 读入
+    const drag = await ev(`(function(){
+      var enc = new TextEncoder();
+      var content = "1\\n00:00:01,000 --> 00:00:04,000\\n第一句台词\\n\\n2\\n00:00:05,000 --> 00:00:09,000\\n第二句台词\\n";
+      var dt = new DataTransfer();
+      dt.items.add(new File([enc.encode(content)], "字幕.srt", { type: "text/plain" }));
+      var panel = document.getElementById('editorPanel');
+      var hint = document.getElementById('dropHint');
+      panel.dispatchEvent(new DragEvent("dragenter", { bubbles: true, dataTransfer: dt }));
+      var during = {
+        dragging: panel.classList.contains('dragging'),
+        hintClass: hint.className,
+        hintH: hint.offsetHeight
+      };
+      panel.dispatchEvent(new DragEvent("drop", { bubbles: true, dataTransfer: dt }));
+      return { during: during, afterDragging: panel.classList.contains('dragging') };
+    })()`);
+
+    ok(drag.during.dragging, "拖拽悬停时面板进入拖拽态");
+    ok(drag.during.hintH > 0, "拖拽提示真的显示出来了（offsetHeight=" + drag.during.hintH + "）");
+    ok(!drag.afterDragging, "松手后拖拽态解除");
+
+    await waitFor("document.getElementById('btnFile').disabled===false && document.getElementById('text').value.length>0", 40, "拖拽读取完成");
+    await sleep(200);
+    const dropped = await ev(`(function(){
+      var t = document.getElementById('text').value;
+      var a = document.getElementById('alert');
+      return { text: t, alert: a.textContent, hintH: document.getElementById('dropHint').offsetHeight };
+    })()`);
+    ok(dropped.hintH === 0, "松手后拖拽提示已隐藏");
+    ok(dropped.text.indexOf("第一句台词") >= 0 && dropped.text.indexOf("第二句台词") >= 0, "拖入的字幕被读入");
+    ok(dropped.text.indexOf("-->") < 0, "字幕时间轴已被剥离");
+    ok(/已去时间轴/.test(dropped.alert), "提示标明已去时间轴");
+
+    /* --------------------------------------------- 10. 无异常 */
     console.log("\n── 运行期异常 ──");
     ok(errors.length === 0, "全程无未捕获异常", errors.slice(0, 2).join(" | "));
 

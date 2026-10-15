@@ -30,17 +30,25 @@
   <div class="grid">
 
     <!-- 文本 -->
-    <section class="panel editor">
+    <section class="panel editor" id="editorPanel">
       <div class="phead">
         <h2>文本</h2>
         <div class="phead-tools">
+          <button class="btn ghost sm" id="btnFile"
+            title="支持 txt / md / csv / json / 字幕(srt·vtt) / 网页(html) / Word(docx)&#10;可多选，也可以直接把文件拖到左边框里">读取文件</button>
           <button class="btn ghost sm" id="btnPaste">读取剪贴板</button>
           <button class="btn ghost sm" id="btnSample">示例</button>
           <button class="btn ghost sm" id="btnClear">清空</button>
         </div>
       </div>
-      <textarea id="text" spellcheck="false"
-        placeholder="把要转成语音的文字贴进来，多少字都行 ——&#10;一万字、十万字都可以，工具会自动分段、并行合成、再无缝拼成一整条 MP3。"></textarea>
+      <div class="editor-body">
+        <textarea id="text" spellcheck="false"
+          placeholder="把要转成语音的文字贴进来，多少字都行 ——&#10;也可以点「读取文件」，或把 txt / Word / 字幕文件直接拖进来。"></textarea>
+        <div class="drop-hint" id="dropHint">
+          <b>松手就读进来</b>
+          <span>txt · md · csv · 字幕 · 网页 · Word(docx)　可多选</span>
+        </div>
+      </div>
       <div class="stats">
         <span><b id="sChars">0</b> 字</span>
         <span><b id="sChunks">0</b> 段</span>
@@ -48,6 +56,8 @@
         <span>约 <b id="sSize">0 KB</b></span>
         <span class="hint" id="sHint"></span>
       </div>
+      <input type="file" id="fileInput" multiple hidden
+        accept=".txt,.text,.md,.markdown,.csv,.tsv,.json,.log,.ini,.cfg,.srt,.vtt,.ass,.ssa,.html,.htm,.xml,.docx,.doc,.pdf">
     </section>
 
     <!-- 音色 -->

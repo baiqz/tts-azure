@@ -181,6 +181,78 @@
     if (!v.st || !v.st.length) sel.value = "";
   }
 
+  /* -------------------------------------------------------- 读取文件 */
+
+  // dragenter/dragleave 会随子元素成对冒泡，用计数器才不会闪
+  var dragDepth = 0;
+
+  function hasFiles(e) {
+    var dt = e.dataTransfer;
+    if (!dt || !dt.types) return false;
+    for (var i = 0; i < dt.types.length; i++) {
+      if (dt.types[i] === "Files") return true;
+    }
+    return false;
+  }
+
+  async function handleFiles(list) {
+    var files = [];
+    for (var i = 0; i < list.length; i++) files.push(list[i]);
+    if (!files.length) return;
+
+    var cur = $("text").value;
+    var btn = $("btnFile");
+    btn.disabled = true;
+    alertBox("正在读取…", "info");
+
+    try {
+      var payload = [];
+      for (var j = 0; j < files.length; j++) {
+        var f = files[j];
+        payload.push({ name: f.name, mime: f.type, bytes: new Uint8Array(await f.arrayBuffer()) });
+      }
+
+      var res = await FileLoader.readAll(payload, function (n, total, name) {
+        alertBox("正在读取（" + n + "/" + total + "）：" + name, "info");
+      });
+
+      var lines = [];
+      var chars = 0;
+      if (res.parts.length) {
+        res.parts.forEach(function (p) { chars += p.chars; });
+        lines.push("已读入 " + res.parts.length + " 个文件，共 " + chars.toLocaleString("zh-CN") + " 字" +
+          (cur.trim() ? "，已接在原有文字后面" : "") + "：");
+        res.parts.forEach(function (p) {
+          lines.push("　· " + p.name + "　" + p.label + " · " + p.note + " · " +
+            p.chars.toLocaleString("zh-CN") + " 字");
+        });
+      }
+      if (res.failed.length) {
+        if (lines.length) lines.push("");
+        lines.push("有 " + res.failed.length + " 个文件读不了：");
+        res.failed.forEach(function (f) {
+          lines.push("　· " + f.name + "　" + f.message);
+        });
+      }
+
+      if (res.parts.length) {
+        $("text").value = cur.trim() ? cur.replace(/\s+$/, "") + "\n\n" + res.text : res.text;
+        updateStats();
+        $("text").scrollTop = $("text").scrollHeight;   // 滚到新读入的部分
+      }
+      alertBox(lines.join("\n"),
+        res.failed.length ? (res.parts.length ? "info" : "") : "good");
+
+      return res;
+    } catch (e) {
+      alertBox("读取失败：" + e.message);
+      return null;
+    } finally {
+      btn.disabled = false;
+      $("fileInput").value = "";   // 清掉，才能重复选同一个文件
+    }
+  }
+
   /* ------------------------------------------------------------ 统计 */
 
   function updateStats() {
@@ -436,6 +508,43 @@
     $("rate").addEventListener("input", scheduleStats); // 语速变了，预估时长跟着变
     $("chunkSize").addEventListener("input", scheduleStats);
 
+    // ---- 读取文件：按钮 + 拖拽 ----
+    $("fileInput").setAttribute("accept", FileLoader.ACCEPT);   // 与引擎里的支持列表保持单一来源
+    $("btnFile").addEventListener("click", function () { $("fileInput").click(); });
+    $("fileInput").addEventListener("change", function (e) {
+      if (e.target.files && e.target.files.length) handleFiles(e.target.files);
+    });
+
+    var panel = $("editorPanel");
+    panel.addEventListener("dragenter", function (e) {
+      if (!hasFiles(e)) return;
+      e.preventDefault();
+      dragDepth++;
+      panel.classList.add("dragging");
+    });
+    panel.addEventListener("dragover", function (e) {
+      if (!hasFiles(e)) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "copy";
+    });
+    panel.addEventListener("dragleave", function (e) {
+      if (!hasFiles(e)) return;
+      dragDepth--;
+      if (dragDepth <= 0) { dragDepth = 0; panel.classList.remove("dragging"); }
+    });
+    panel.addEventListener("drop", function (e) {
+      e.preventDefault();
+      dragDepth = 0;
+      panel.classList.remove("dragging");
+      if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) {
+        handleFiles(e.dataTransfer.files);
+      }
+    });
+    // 拖到页面其他地方松手时，别让浏览器直接把文件当页面打开
+    ["dragover", "drop"].forEach(function (t) {
+      document.addEventListener(t, function (e) { e.preventDefault(); });
+    });
+
     $("btnPaste").addEventListener("click", async function () {
       try {
         var t = await navigator.clipboard.readText();
@@ -474,5 +583,8 @@
   }
 
   // 供自检使用
-  window.__ui = { state: st, opts: opts, updateStats: updateStats, checkChannel: checkChannel };
+  window.__ui = {
+    state: st, opts: opts, updateStats: updateStats,
+    checkChannel: checkChannel, handleFiles: handleFiles,
+  };
 })();

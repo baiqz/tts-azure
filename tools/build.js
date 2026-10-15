@@ -17,6 +17,7 @@ const JS_ORDER = [
   "voices-data.js",
   "mp3.js",
   "split.js",
+  "fileloader.js",
   "azure.js",
   "voices.js",
   "engine.js",
@@ -76,13 +77,16 @@ function check(out) {
   notes.push(`DOM id 自检：JS 引用 ${used.size} 个，HTML 定义 ${ids.size} 个，全部命中`);
 
   // 5. 关键模块必须都在产物里
-  for (const key of ["AzureVoicesData", "Mp3Tool", "TextSplit", "AzureChannel", "TtsEngine", "MSTranslatorAndroidApp"]) {
+  for (const key of ["AzureVoicesData", "Mp3Tool", "TextSplit", "FileLoader", "AzureChannel", "TtsEngine", "MSTranslatorAndroidApp"]) {
     if (!out.includes(key)) problems.push(`产物缺少关键模块/常量：${key}`);
   }
 
   // 6. 关键行为不得被误删
   if (!/referrerPolicy:\s*"no-referrer"/.test(out)) {
     problems.push("缺少 referrerPolicy:'no-referrer'（服务端会因 Referer 返回 401）");
+  }
+  if (!/new DecompressionStream\("deflate-raw"\)/.test(out)) {
+    problems.push("缺少 docx 解压（DecompressionStream deflate-raw）");
   }
 }
 
